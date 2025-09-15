@@ -29,6 +29,10 @@ try:
         OutputPathManager, render_filename, log_jsonl, install_log_tee,
         UnifiedImageGenerator, TaskManager
     )
+    # 导入旧的 ImageSource 类用于兼容性
+    from banana_gen.images.sources import (
+        LocalFileSource, UrlSource, FolderSequencerSource, RecursiveFolderSequencerSource
+    )
 except ImportError as e:
     print(f"❌ 导入 banana_gen 模块失败: {e}")
     print(f"📁 当前目录: {current_dir}")
@@ -223,11 +227,13 @@ def prompts_page():
     
     prompts_by_count = {}
     if prompt_registry:
-        for prompt in prompt_registry.list_all():
-            count = prompt.input_count
-            if count not in prompts_by_count:
-                prompts_by_count[count] = []
-            prompts_by_count[count].append(prompt)
+        for prompt_id in prompt_registry.list_all():
+            prompt = prompt_registry.get(prompt_id)
+            if prompt:
+                count = prompt.input_count
+                if count not in prompts_by_count:
+                    prompts_by_count[count] = []
+                prompts_by_count[count].append(prompt)
     
     return render_template('prompts.html', prompts_by_count=prompts_by_count)
 
@@ -310,8 +316,14 @@ def execute_page():
     
     prompts = []
     if prompt_registry:
-        prompts = [{'id': p.id, 'text': p.text[:100] + '...', 'input_count': p.input_count} 
-                  for p in prompt_registry.list_all()]
+        for prompt_id in prompt_registry.list_all():
+            prompt = prompt_registry.get(prompt_id)
+            if prompt:
+                prompts.append({
+                    'id': prompt.id, 
+                    'text': prompt.text[:100] + '...', 
+                    'input_count': prompt.input_count
+                })
     
     return render_template('execute.html', prompts=prompts, status=execution_status)
 

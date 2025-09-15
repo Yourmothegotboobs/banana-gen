@@ -32,7 +32,7 @@ def main():
         },
         {
             "type": "local_image", 
-            "main_path": "example.jpg",
+            "main_path": "example/pictures/2.png",
             "fallback_paths": ["example/test_images/sample.jpg", "example/outputs/real_api_demo_01.png"]
         }
     ]

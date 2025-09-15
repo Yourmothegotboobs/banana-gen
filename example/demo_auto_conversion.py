@@ -79,7 +79,7 @@ def demo_nested_with_auto_conversion():
     
     # 2. 创建输入
     folder_source = ImageFolder(
-        folder_path="/path/to/input/folder",
+        folder_path="example/pictures",
         fallback_paths=["example/test_images"]
     )
     

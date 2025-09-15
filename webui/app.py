@@ -25,8 +25,9 @@ sys.path.insert(0, parent_dir)
 try:
     from banana_gen import (
         AdvancedKeyManager, PromptRegistry, build_plan, execute_plan,
-        LocalFileSource, UrlSource, FolderSequencerSource, RecursiveFolderSequencerSource,
-        OutputPathManager, render_filename, log_jsonl, install_log_tee
+        LocalImage, UrlImage, ImageFolder, ImageRecursionFolder,
+        OutputPathManager, render_filename, log_jsonl, install_log_tee,
+        UnifiedImageGenerator, TaskManager
     )
 except ImportError as e:
     print(f"❌ 导入 banana_gen 模块失败: {e}")
@@ -61,82 +62,26 @@ def init_key_manager():
     """初始化 Key 管理器"""
     global key_manager
     try:
-        key_manager = AdvancedKeyManager()
-        print(f"🔧 创建了新的 AdvancedKeyManager 实例")
-        
-        # 尝试从多个位置加载 key 文件
+        # 使用 from_directory 方法直接创建 Key 管理器
         key_dirs = ['banana_gen/keys', 'webui/keys']
-        loaded_count = 0
         
         for keys_dir in key_dirs:
             if os.path.exists(keys_dir):
-                print(f"📁 检查目录: {keys_dir}")
+                print(f"📁 尝试从目录加载 Key: {keys_dir}")
                 try:
-                    key_manager.load_keys_from_directory(keys_dir)
+                    key_manager = AdvancedKeyManager.from_directory(keys_dir)
                     print(f"✅ 已从目录加载 Key: {keys_dir}")
-                    loaded_count += 1
+                    print(f"✅ Key 管理器初始化完成，共 {key_manager.get_total_keys()} 个 Key")
+                    return True
                 except Exception as e:
                     print(f"⚠️ 从目录 {keys_dir} 加载 Key 失败: {e}")
-            else:
-                print(f"⚠️ 目录不存在: {keys_dir}")
+                    continue
         
-        # 如果没有从目录加载到，尝试加载单个文件
-        if loaded_count == 0:
-            key_files = [
-                "banana_gen/keys/api_keys_1.txt",
-                "banana_gen/keys/api_keys_2.txt", 
-                "banana_gen/keys/api_keys_3.txt",
-                "banana_gen/keys/api_keys_4.txt"
-            ]
-            
-            for key_file in key_files:
-                if os.path.exists(key_file):
-                    try:
-                        # 从文件名提取优先级
-                        filename = os.path.basename(key_file)
-                        if filename.startswith("api_keys_") and filename.endswith(".txt"):
-                            try:
-                                priority = int(filename[9:-4])  # 提取数字部分
-                            except ValueError:
-                                priority = 1
-                        else:
-                            priority = 1
-                        
-                        key_manager.load_keys_from_file(key_file, priority)
-                        print(f"✅ 已加载 Key 文件: {key_file} (优先级: {priority})")
-                        loaded_count += 1
-                    except Exception as e:
-                        print(f"⚠️ 加载 Key 文件 {key_file} 失败: {e}")
-        
-        # 如果还是没有加载到，尝试直接检查文件
-        if loaded_count == 0:
-            print("🔍 检查 Key 文件...")
-            for keys_dir in key_dirs:
-                if os.path.exists(keys_dir):
-                    files = os.listdir(keys_dir)
-                    print(f"📁 目录 {keys_dir} 中的文件: {files}")
-                    for file in files:
-                        if file.startswith("api_keys_") and file.endswith(".txt"):
-                            file_path = os.path.join(keys_dir, file)
-                            try:
-                                with open(file_path, 'r') as f:
-                                    content = f.read().strip()
-                                    if content:
-                                        print(f"📄 文件 {file_path} 内容长度: {len(content)}")
-                                        # 尝试直接加载
-                                        try:
-                                            priority = int(file[9:-4])
-                                        except ValueError:
-                                            priority = 1
-                                        key_manager.load_keys_from_file(file_path, priority)
-                                        loaded_count += 1
-                                    else:
-                                        print(f"⚠️ 文件 {file_path} 为空")
-                            except Exception as e:
-                                print(f"❌ 读取文件 {file_path} 失败: {e}")
-        
-        print(f"✅ Key 管理器初始化完成，共 {key_manager.get_total_keys()} 个 Key")
+        # 如果所有目录都失败，创建空的 Key 管理器
+        print("⚠️ 未找到有效的 Key 文件，创建空的 Key 管理器")
+        key_manager = AdvancedKeyManager()
         return True
+        
     except Exception as e:
         print(f"❌ Key 管理器初始化失败: {e}")
         key_manager = None

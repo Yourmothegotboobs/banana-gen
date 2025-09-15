@@ -1,0 +1,412 @@
+{% extends "base_refactored.html" %}
+
+{% block title %}任务管理 - Banana Gen Web UI{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="bi bi-play-circle text-primary"></i>
+                任务管理
+            </h2>
+            <div>
+                <span class="badge bg-primary me-2" id="task-count">0 个任务</span>
+                <span class="badge bg-success" id="system-status-badge">系统正常</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 任务创建表单 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-plus-circle"></i>
+                    创建新任务
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="task-form">
+                    <!-- 图片来源配置 -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold mb-3">
+                            <i class="bi bi-image"></i>
+                            图片来源配置
+                        </h6>
+                        <div id="input-sources">
+                            <div class="input-source-item mb-3 p-3 border rounded">
+                                <div class="row g-3">
+                                    <div class="col-md-3">
+                                        <select class="form-select source-type" name="source_type">
+                                            <option value="local_image">本地图片</option>
+                                            <option value="url_image">网络图片</option>
+                                            <option value="folder">文件夹</option>
+                                            <option value="recursive_folder">递归文件夹</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <input type="text" class="form-control source-path" placeholder="输入路径或URL">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <button type="button" class="btn btn-outline-primary btn-sm w-100" onclick="browseFolder(this)">
+                                            <i class="bi bi-folder"></i> 浏览
+                                        </button>
+                                    </div>
+                                    <div class="col-md-1">
+                                        <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="removeSource(this)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-outline-success btn-sm" onclick="addSource()">
+                            <i class="bi bi-plus"></i> 添加图片来源
+                        </button>
+                    </div>
+                    
+                    <!-- Prompt 选择 -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold mb-3">
+                            <i class="bi bi-chat-text"></i>
+                            Prompt 选择
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <select class="form-select" id="prompt-select" multiple>
+                                    {% for prompt in prompts %}
+                                    <option value="{{ prompt.id }}">{{ prompt.id }} ({{ prompt.input_count }} 输入图)</option>
+                                    {% endfor %}
+                                </select>
+                                <small class="text-muted">按住 Ctrl 选择多个 Prompt</small>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="use-custom-prompt">
+                                    <label class="form-check-label" for="use-custom-prompt">
+                                        使用自定义 Prompt
+                                    </label>
+                                </div>
+                                <textarea class="form-control mt-2" id="custom-prompt" rows="3" placeholder="输入自定义 Prompt..." style="display: none;"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 字符串替换 -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold mb-3">
+                            <i class="bi bi-arrow-repeat"></i>
+                            字符串替换规则
+                        </h6>
+                        <div id="replacement-rules">
+                            <div class="replacement-rule mb-3 p-3 border rounded">
+                                <div class="row g-2">
+                                    <div class="col-md-2">
+                                        <input type="text" class="form-control form-control-sm" placeholder="基础字符串">
+                                    </div>
+                                    <div class="col-md-8">
+                                        <input type="text" class="form-control form-control-sm" placeholder="替换选项，用逗号分隔">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="removeReplacement(this)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-outline-success btn-sm" onclick="addReplacement()">
+                            <i class="bi bi-plus"></i> 添加替换规则
+                        </button>
+                    </div>
+                    
+                    <!-- 输出配置 -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold mb-3">
+                            <i class="bi bi-folder"></i>
+                            输出配置
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">输出目录</label>
+                                <input type="text" class="form-control" id="output-dir" value="webui/outputs">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">基础名称</label>
+                                <input type="text" class="form-control" id="base-name" value="webui_task">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 提交按钮 -->
+                    <div class="d-flex justify-content-between">
+                        <button type="button" class="btn btn-outline-secondary" onclick="previewTask()">
+                            <i class="bi bi-eye"></i> 预览任务
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-play-circle"></i> 创建并执行任务
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 任务状态 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-activity"></i>
+                    任务状态
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="h4 text-primary" id="total-tasks">0</div>
+                            <small class="text-muted">总任务数</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="h4 text-success" id="completed-tasks">0</div>
+                            <small class="text-muted">已完成</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="h4 text-danger" id="failed-tasks">0</div>
+                            <small class="text-muted">失败</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="h4 text-info" id="progress-percent">0%</div>
+                            <small class="text-muted">进度</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="progress mt-3" style="height: 10px;">
+                    <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 自定义 Prompt 切换
+    document.getElementById('use-custom-prompt').addEventListener('change', function() {
+        const customPrompt = document.getElementById('custom-prompt');
+        const promptSelect = document.getElementById('prompt-select');
+        
+        if (this.checked) {
+            customPrompt.style.display = 'block';
+            promptSelect.disabled = true;
+        } else {
+            customPrompt.style.display = 'none';
+            promptSelect.disabled = false;
+        }
+    });
+    
+    // 表单提交
+    document.getElementById('task-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        createTask();
+    });
+    
+    // 添加图片来源
+    function addSource() {
+        const container = document.getElementById('input-sources');
+        const newSource = document.querySelector('.input-source-item').cloneNode(true);
+        newSource.querySelector('.source-path').value = '';
+        container.appendChild(newSource);
+    }
+    
+    // 移除图片来源
+    function removeSource(button) {
+        if (document.querySelectorAll('.input-source-item').length > 1) {
+            button.closest('.input-source-item').remove();
+        }
+    }
+    
+    // 浏览文件夹
+    function browseFolder(button) {
+        const input = button.closest('.input-source-item').querySelector('.source-path');
+        const type = button.closest('.input-source-item').querySelector('.source-type').value;
+        
+        if (type === 'folder' || type === 'recursive_folder') {
+            input.value = prompt('请输入文件夹路径:');
+        }
+    }
+    
+    // 添加替换规则
+    function addReplacement() {
+        const container = document.getElementById('replacement-rules');
+        const newRule = document.querySelector('.replacement-rule').cloneNode(true);
+        newRule.querySelectorAll('input').forEach(input => input.value = '');
+        container.appendChild(newRule);
+    }
+    
+    // 移除替换规则
+    function removeReplacement(button) {
+        if (document.querySelectorAll('.replacement-rule').length > 1) {
+            button.closest('.replacement-rule').remove();
+        }
+    }
+    
+    // 创建任务
+    function createTask() {
+        const form = document.getElementById('task-form');
+        const submitBtn = form.querySelector('button[type="submit"]');
+        
+        // 收集表单数据
+        const inputSources = [];
+        document.querySelectorAll('.input-source-item').forEach(item => {
+            const type = item.querySelector('.source-type').value;
+            const path = item.querySelector('.source-path').value;
+            if (path) {
+                inputSources.push({
+                    type: type,
+                    path: path
+                });
+            }
+        });
+        
+        const promptIds = Array.from(document.getElementById('prompt-select').selectedOptions).map(option => option.value);
+        const useCustomPrompt = document.getElementById('use-custom-prompt').checked;
+        const customPrompt = document.getElementById('custom-prompt').value;
+        
+        const stringReplaceList = [];
+        document.querySelectorAll('.replacement-rule').forEach(rule => {
+            const baseString = rule.querySelector('input[placeholder="基础字符串"]').value;
+            const replacements = rule.querySelector('input[placeholder="替换选项，用逗号分隔"]').value;
+            if (baseString && replacements) {
+                const replacementArray = [baseString, ...replacements.split(',').map(s => s.trim())];
+                stringReplaceList.push(replacementArray);
+            }
+        });
+        
+        const taskData = {
+            input_sources: inputSources,
+            prompt_ids: useCustomPrompt ? [] : promptIds,
+            custom_prompt: useCustomPrompt ? customPrompt : null,
+            string_replace_list: stringReplaceList,
+            output_dir: document.getElementById('output-dir').value,
+            base_name: document.getElementById('base-name').value
+        };
+        
+        // 显示加载状态
+        setLoading(submitBtn, true);
+        
+        // 发送请求
+        fetch('/api/tasks/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(taskData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage(data.message, 'success');
+                updateTaskCount(data.task_count);
+                startTask();
+            } else {
+                showMessage(data.error, 'danger');
+            }
+        })
+        .catch(error => {
+            showMessage('创建任务失败: ' + error.message, 'danger');
+        })
+        .finally(() => {
+            setLoading(submitBtn, false);
+        });
+    }
+    
+    // 开始任务
+    function startTask() {
+        fetch('/api/tasks/start', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage('任务已开始执行', 'success');
+                startStatusMonitoring();
+            } else {
+                showMessage(data.error, 'danger');
+            }
+        })
+        .catch(error => {
+            showMessage('启动任务失败: ' + error.message, 'danger');
+        });
+    }
+    
+    // 更新任务数量
+    function updateTaskCount(count) {
+        document.getElementById('task-count').textContent = count + ' 个任务';
+    }
+    
+    // 开始状态监控
+    function startStatusMonitoring() {
+        const interval = setInterval(() => {
+            fetch('/api/tasks/status')
+                .then(response => response.json())
+                .then(data => {
+                    updateTaskStatus(data);
+                    
+                    if (!data.running) {
+                        clearInterval(interval);
+                    }
+                })
+                .catch(error => {
+                    console.error('获取状态失败:', error);
+                });
+        }, 2000);
+    }
+    
+    // 更新任务状态
+    function updateTaskStatus(data) {
+        const stats = data.stats || {};
+        const total = stats.total_tasks || 0;
+        const completed = stats.completed_tasks || 0;
+        const failed = stats.failed_tasks || 0;
+        const progress = total > 0 ? Math.round((completed + failed) / total * 100) : 0;
+        
+        document.getElementById('total-tasks').textContent = total;
+        document.getElementById('completed-tasks').textContent = completed;
+        document.getElementById('failed-tasks').textContent = failed;
+        document.getElementById('progress-percent').textContent = progress + '%';
+        
+        const progressBar = document.getElementById('progress-bar');
+        progressBar.style.width = progress + '%';
+        progressBar.className = 'progress-bar ' + (progress === 100 ? 'bg-success' : 'bg-primary');
+    }
+    
+    // 页面加载时检查状态
+    document.addEventListener('DOMContentLoaded', function() {
+        fetch('/api/tasks/status')
+            .then(response => response.json())
+            .then(data => {
+                updateTaskStatus(data);
+            })
+            .catch(error => {
+                console.error('获取初始状态失败:', error);
+            });
+    });
+</script>
+{% endblock %}

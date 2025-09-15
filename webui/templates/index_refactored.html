@@ -1,0 +1,210 @@
+{% extends "base_refactored.html" %}
+
+{% block title %}首页 - Banana Gen Web UI{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="text-center mb-5">
+            <h1 class="display-4 fw-bold text-primary">
+                <i class="bi bi-lightning-charge-fill"></i>
+                Banana Gen
+            </h1>
+            <p class="lead text-muted">统一的图像生成管理框架 - 重构版本</p>
+            <p class="text-muted">简洁 • 高效 • 易用</p>
+        </div>
+    </div>
+</div>
+
+<!-- 快速开始 -->
+<div class="row mb-5">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-rocket-takeoff"></i>
+                    快速开始
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="d-grid">
+                            <a href="/tasks" class="btn btn-primary btn-lg">
+                                <i class="bi bi-play-circle-fill"></i>
+                                创建任务
+                            </a>
+                        </div>
+                        <p class="text-muted text-center mt-2">创建和管理图像生成任务</p>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-grid">
+                            <a href="/outputs" class="btn btn-success btn-lg">
+                                <i class="bi bi-folder"></i>
+                                查看输出
+                            </a>
+                        </div>
+                        <p class="text-muted text-center mt-2">浏览和管理生成的图片</p>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-grid">
+                            <a href="/status" class="btn btn-info btn-lg">
+                                <i class="bi bi-activity"></i>
+                                系统状态
+                            </a>
+                        </div>
+                        <p class="text-muted text-center mt-2">监控系统运行状态</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 功能特性 -->
+<div class="row g-4 mb-5">
+    <div class="col-md-6 col-lg-3">
+        <div class="card h-100 text-center">
+            <div class="card-body">
+                <div class="mb-3">
+                    <i class="bi bi-key-fill text-primary" style="font-size: 3rem;"></i>
+                </div>
+                <h5 class="card-title">智能 Key 管理</h5>
+                <p class="card-text">多级优先级 Key 池，自动故障转移和负载均衡</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 col-lg-3">
+        <div class="card h-100 text-center">
+            <div class="card-body">
+                <div class="mb-3">
+                    <i class="bi bi-chat-text-fill text-success" style="font-size: 3rem;"></i>
+                </div>
+                <h5 class="card-title">Prompt 管理</h5>
+                <p class="card-text">按输入图数量分类，支持占位符替换</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 col-lg-3">
+        <div class="card h-100 text-center">
+            <div class="card-body">
+                <div class="mb-3">
+                    <i class="bi bi-diagram-3-fill text-info" style="font-size: 3rem;"></i>
+                </div>
+                <h5 class="card-title">嵌套 Workflow</h5>
+                <p class="card-text">支持复杂的图像生成链式处理</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 col-lg-3">
+        <div class="card h-100 text-center">
+            <div class="card-body">
+                <div class="mb-3">
+                    <i class="bi bi-cpu-fill text-warning" style="font-size: 3rem;"></i>
+                </div>
+                <h5 class="card-title">任务调度</h5>
+                <p class="card-text">并发处理，实时监控，进度跟踪</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 系统状态 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-activity"></i>
+                    系统状态
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row" id="system-status">
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="h4 text-primary">
+                                <span class="status-indicator" id="generator-status"></span>
+                                生成器
+                            </div>
+                            <small class="text-muted">UnifiedImageGenerator</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="h4 text-success">
+                                <span class="status-indicator" id="prompt-status"></span>
+                                Prompt 注册表
+                            </div>
+                            <small class="text-muted">PromptRegistry</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="h4 text-info">
+                                <span class="status-indicator" id="task-status"></span>
+                                任务状态
+                            </div>
+                            <small class="text-muted">TaskManager</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="h4 text-warning">
+                                <span class="status-indicator" id="execution-status"></span>
+                                执行状态
+                            </div>
+                            <small class="text-muted">Execution</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 页面加载时检查系统状态
+    document.addEventListener('DOMContentLoaded', function() {
+        checkDetailedStatus();
+        setInterval(checkDetailedStatus, 10000);
+    });
+
+    function checkDetailedStatus() {
+        fetch('/api/status')
+            .then(response => response.json())
+            .then(data => {
+                // 更新生成器状态
+                const generatorStatus = document.getElementById('generator-status');
+                generatorStatus.className = data.generator ? 'status-indicator status-online' : 'status-indicator status-offline';
+                
+                // 更新 Prompt 状态
+                const promptStatus = document.getElementById('prompt-status');
+                promptStatus.className = data.prompt_registry ? 'status-indicator status-online' : 'status-indicator status-offline';
+                
+                // 更新任务状态
+                const taskStatus = document.getElementById('task-status');
+                taskStatus.className = data.current_task ? 'status-indicator status-online' : 'status-indicator status-warning';
+                
+                // 更新执行状态
+                const executionStatus = document.getElementById('execution-status');
+                if (data.execution_status && data.execution_status.running) {
+                    executionStatus.className = 'status-indicator status-warning';
+                } else {
+                    executionStatus.className = 'status-indicator status-online';
+                }
+            })
+            .catch(() => {
+                // 设置所有状态为离线
+                document.querySelectorAll('#system-status .status-indicator').forEach(indicator => {
+                    indicator.className = 'status-indicator status-offline';
+                });
+            });
+    }
+</script>
+{% endblock %}

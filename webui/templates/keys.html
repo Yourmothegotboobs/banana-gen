@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+
+{% block title %}Key 管理 - Banana Gen Web UI{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="bi bi-key-fill text-primary"></i>
+                Key 管理
+            </h2>
+            <button class="btn btn-primary" onclick="openUploadModal()">
+                <i class="bi bi-upload"></i>
+                上传 Key 文件
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Key 统计信息 -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-primary">{{ key_stats.total_keys or 0 }}</h5>
+                <p class="card-text">总 Key 数量</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-success">{{ key_stats.active_keys or 0 }}</h5>
+                <p class="card-text">活跃 Key</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-warning">{{ key_stats.failed_keys or 0 }}</h5>
+                <p class="card-text">失效 Key</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-danger">{{ key_stats.permanent_failed or 0 }}</h5>
+                <p class="card-text">永久失效</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Key 文件列表 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-list-ul"></i>
+                    Key 文件列表
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if key_files %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>文件名</th>
+                                <th>来源目录</th>
+                                <th>优先级</th>
+                                <th>Key 数量</th>
+                                <th>Key 预览</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for key_file in key_files %}
+                            <tr>
+                                <td>
+                                    <i class="bi bi-file-text text-primary"></i>
+                                    {{ key_file.filename }}
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ key_file.source }}</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if key_file.priority == '1' %}danger{% elif key_file.priority == '2' %}warning{% else %}info{% endif %}">
+                                        优先级 {{ key_file.priority }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-success">{{ key_file.count }} 个</span>
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-wrap gap-1">
+                                        {% for key in key_file.key_list[:3] %}
+                                        <code class="small">{{ key }}</code>
+                                        {% endfor %}
+                                        {% if key_file.key_list|length > 3 %}
+                                        <span class="text-muted">...</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-danger" 
+                                            onclick="deleteKeyFile('{{ key_file.filename }}')">
+                                        <i class="bi bi-trash"></i>
+                                        删除
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-key text-muted" style="font-size: 4rem;"></i>
+                    <h5 class="text-muted mt-3">暂无 Key 文件</h5>
+                    <p class="text-muted">请上传 Key 文件开始使用</p>
+                    <button class="btn btn-primary" onclick="openUploadModal()">
+                        <i class="bi bi-upload"></i>
+                        上传第一个 Key 文件
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 新的弹窗系统将通过 JavaScript 动态创建 -->
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function openUploadModal() {
+        const modalContent = `
+            <form id="uploadForm" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label for="priority" class="form-label">优先级</label>
+                    <select class="form-select" id="priority" name="priority" required>
+                        <option value="1">优先级 1 (最高)</option>
+                        <option value="2">优先级 2 (中等)</option>
+                        <option value="3">优先级 3 (较低)</option>
+                        <option value="4">优先级 4 (最低)</option>
+                    </select>
+                    <div class="form-text">优先级越高，Key 使用频率越高</div>
+                </div>
+                <div class="mb-3">
+                    <label for="keyFile" class="form-label">Key 文件</label>
+                    <input type="file" class="form-control" id="keyFile" name="file" 
+                           accept=".txt" required>
+                    <div class="form-text">支持 .txt 格式，每行一个 Key</div>
+                </div>
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>Key 文件格式：</strong>
+                    <ul class="mb-0 mt-2">
+                        <li>每行一个 API Key</li>
+                        <li>支持空行和注释（以 # 开头）</li>
+                        <li>文件名格式：api_keys_1.txt, api_keys_2.txt 等</li>
+                    </ul>
+                </div>
+            </form>
+        `;
+        
+        const modalFooter = `
+            <button type="button" class="btn btn-secondary" onclick="customModal.close('uploadModal')">取消</button>
+            <button type="button" class="btn btn-primary" onclick="uploadKeys()">
+                <i class="bi bi-upload"></i>
+                上传
+            </button>
+        `;
+        
+        customModal.create('uploadModal', '上传 Key 文件', modalContent, modalFooter);
+        customModal.open('uploadModal');
+    }
+
+    function uploadKeys() {
+        const form = document.getElementById('uploadForm');
+        const formData = new FormData(form);
+        const uploadBtn = event.target;
+        const originalText = showLoading(uploadBtn, '上传中...');
+
+        fetch('/api/keys/upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideLoading(uploadBtn, originalText);
+            if (data.success) {
+                showToast(data.message, 'success');
+                customModal.close('uploadModal');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast(data.error || '上传失败', 'danger');
+            }
+        })
+        .catch(error => {
+            hideLoading(uploadBtn, originalText);
+            showToast('上传失败: ' + error.message, 'danger');
+        });
+    }
+
+    function deleteKeyFile(filename) {
+        confirmAction(`确定要删除 Key 文件 "${filename}" 吗？`, () => {
+            fetch(`/api/keys/delete/${filename}`, {
+                method: 'GET'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Key 文件删除成功', 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showToast(data.error || '删除失败', 'danger');
+                }
+            })
+            .catch(error => {
+                showToast('删除失败: ' + error.message, 'danger');
+            });
+        });
+    }
+
+    // 文件选择时自动设置优先级
+    document.getElementById('keyFile').addEventListener('change', function() {
+        const filename = this.files[0]?.name;
+        if (filename) {
+            const match = filename.match(/api_keys_(\d+)\.txt/);
+            if (match) {
+                document.getElementById('priority').value = match[1];
+            }
+        }
+    });
+</script>
+{% endblock %}

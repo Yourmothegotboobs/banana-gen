@@ -1,0 +1,327 @@
+{% extends "base.html" %}
+
+{% block title %}Prompt 管理 - Banana Gen Web UI{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="bi bi-chat-text-fill text-success"></i>
+                Prompt 管理
+            </h2>
+            <div>
+                <button class="btn btn-outline-success me-2" onclick="exportPrompts()">
+                    <i class="bi bi-download"></i>
+                    导出 Prompts
+                </button>
+                <button class="btn btn-success" onclick="openAddPromptModal()">
+                    <i class="bi bi-plus"></i>
+                    添加 Prompt
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Prompt 统计 -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-primary">{{ prompts_by_count.get(0, [])|length }}</h5>
+                <p class="card-text">0 输入图</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-success">{{ prompts_by_count.get(1, [])|length }}</h5>
+                <p class="card-text">1 输入图</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-info">{{ prompts_by_count.get(2, [])|length }}</h5>
+                <p class="card-text">2 输入图</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-warning">{{ prompts_by_count.get(3, [])|length }}</h5>
+                <p class="card-text">3 输入图</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Prompt 分类展示 -->
+<div class="row">
+    {% for input_count, prompts in prompts_by_count.items() %}
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-{% if input_count == 0 %}image{% elif input_count == 1 %}image{% elif input_count == 2 %}images{% else %}images{% endif %}"></i>
+                    {{ input_count }} 输入图 Prompts ({{ prompts|length }} 个)
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    {% for prompt in prompts %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 prompt-card" data-prompt-id="{{ prompt.id }}">
+                            <div class="card-body">
+                                <h6 class="card-title">
+                                    <code>{{ prompt.id }}</code>
+                                    {% if prompt.tags %}
+                                    <div class="mt-2">
+                                        {% for tag in prompt.tags[:3] %}
+                                        <span class="badge bg-secondary me-1">{{ tag }}</span>
+                                        {% endfor %}
+                                        {% if prompt.tags|length > 3 %}
+                                        <span class="text-muted">...</span>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                </h6>
+                                <p class="card-text small text-muted">
+                                    {{ prompt.text[:100] }}{% if prompt.text|length > 100 %}...{% endif %}
+                                </p>
+                            </div>
+                            <div class="card-footer bg-transparent">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">
+                                        <i class="bi bi-arrow-right-circle"></i>
+                                        {{ input_count }} 输入图
+                                    </small>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-primary" 
+                                                onclick="viewPrompt('{{ prompt.id }}')">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-success" 
+                                                onclick="usePrompt('{{ prompt.id }}')">
+                                            <i class="bi bi-play"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- 新的弹窗系统将通过 JavaScript 动态创建 -->
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentPromptId = null;
+
+    function viewPrompt(promptId) {
+        currentPromptId = promptId;
+        
+        fetch(`/api/prompts/${promptId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showToast(data.error, 'danger');
+                    return;
+                }
+                
+                const detailsHtml = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>基本信息</h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>ID:</strong></td>
+                                    <td><code>${data.id}</code></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>输入图数量:</strong></td>
+                                    <td><span class="badge bg-primary">${data.input_count}</span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>标签:</strong></td>
+                                    <td>
+                                        ${data.tags ? data.tags.map(tag => `<span class="badge bg-secondary me-1">${tag}</span>`).join('') : '<span class="text-muted">无</span>'}
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>使用示例</h6>
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i>
+                                <strong>占位符替换：</strong>
+                                <ul class="mb-0 mt-2">
+                                    <li>使用 {变量名} 格式定义占位符</li>
+                                    <li>在任务执行时进行替换</li>
+                                    <li>支持批量替换词组合</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <h6>完整 Prompt 文本</h6>
+                        <div class="bg-light p-3 rounded">
+                            <pre class="mb-0" style="white-space: pre-wrap; font-size: 14px;">${data.text}</pre>
+                        </div>
+                    </div>
+                `;
+                
+                const modalFooter = `
+                    <button type="button" class="btn btn-secondary" onclick="customModal.close('promptModal')">关闭</button>
+                    <button type="button" class="btn btn-success" onclick="useCurrentPrompt()">
+                        <i class="bi bi-play"></i>
+                        使用此 Prompt
+                    </button>
+                `;
+                
+                customModal.create('promptModal', 'Prompt 详情', detailsHtml, modalFooter);
+                customModal.open('promptModal');
+            })
+            .catch(error => {
+                showToast('获取 Prompt 详情失败: ' + error.message, 'danger');
+            });
+    }
+
+    function usePrompt(promptId) {
+        // 跳转到任务执行页面并预选此 prompt
+        window.location.href = `/execute?prompt=${promptId}`;
+    }
+
+    function openAddPromptModal() {
+        const modalContent = `
+            <form id="addPromptForm">
+                <div class="mb-3">
+                    <label for="promptId" class="form-label">Prompt ID</label>
+                    <input type="text" class="form-control" id="promptId" required>
+                    <div class="form-text">唯一标识符，如：p1_custom_style</div>
+                </div>
+                <div class="mb-3">
+                    <label for="promptText" class="form-label">Prompt 文本</label>
+                    <textarea class="form-control" id="promptText" rows="4" required></textarea>
+                    <div class="form-text">支持占位符，如：{style}, {color}</div>
+                </div>
+                <div class="mb-3">
+                    <label for="inputCount" class="form-label">输入图数量</label>
+                    <select class="form-select" id="inputCount" required>
+                        <option value="0">0 输入图</option>
+                        <option value="1">1 输入图</option>
+                        <option value="2">2 输入图</option>
+                        <option value="3">3 输入图</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="promptTags" class="form-label">标签</label>
+                    <input type="text" class="form-control" id="promptTags" 
+                           placeholder="用逗号分隔，如：anime, style, portrait">
+                    <div class="form-text">用于分类和搜索</div>
+                </div>
+            </form>
+        `;
+        
+        const modalFooter = `
+            <button type="button" class="btn btn-secondary" onclick="customModal.close('addPromptModal')">取消</button>
+            <button type="button" class="btn btn-success" onclick="addPrompt()">
+                <i class="bi bi-plus"></i>
+                添加
+            </button>
+        `;
+        
+        customModal.create('addPromptModal', '添加新 Prompt', modalContent, modalFooter);
+        customModal.open('addPromptModal');
+    }
+
+    function useCurrentPrompt() {
+        if (currentPromptId) {
+            usePrompt(currentPromptId);
+        }
+    }
+
+    function addPrompt() {
+        const form = document.getElementById('addPromptForm');
+        const formData = new FormData(form);
+        
+        const promptData = {
+            id: document.getElementById('promptId').value,
+            text: document.getElementById('promptText').value,
+            input_count: parseInt(document.getElementById('inputCount').value),
+            tags: document.getElementById('promptTags').value.split(',').map(t => t.trim()).filter(t => t)
+        };
+        
+        // 这里应该调用后端 API 添加 prompt
+        // 暂时显示成功消息
+        showToast('Prompt 添加功能需要后端支持', 'info');
+        customModal.close('addPromptModal');
+    }
+
+    function exportPrompts() {
+        // 导出所有 prompts 为 JSON 文件
+        const promptsData = {
+            prompts: [
+                {% for input_count, prompts in prompts_by_count.items() %}
+                {% for prompt in prompts %}
+                {
+                    "id": "{{ prompt.id }}",
+                    "text": {{ prompt.text|tojson }},
+                    "input_count": {{ prompt.input_count }},
+                    "tags": {{ prompt.tags|tojson if prompt.tags else 'null' }}
+                }{% if not loop.last %},{% endif %}
+                {% endfor %}
+                {% if not loop.last %},{% endif %}
+                {% endfor %}
+            ]
+        };
+        
+        const dataStr = JSON.stringify(promptsData, null, 2);
+        const dataBlob = new Blob([dataStr], {type: 'application/json'});
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'prompts_export.json';
+        link.click();
+        URL.revokeObjectURL(url);
+        
+        showToast('Prompts 导出成功', 'success');
+    }
+
+    // 搜索功能
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.className = 'form-control mb-3';
+        searchInput.placeholder = '搜索 Prompt ID、标签或内容...';
+        
+        const header = document.querySelector('.d-flex.justify-content-between.align-items-center.mb-4');
+        header.appendChild(searchInput);
+        
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const promptCards = document.querySelectorAll('.prompt-card');
+            
+            promptCards.forEach(card => {
+                const text = card.textContent.toLowerCase();
+                if (text.includes(searchTerm)) {
+                    card.closest('.col-md-6').style.display = '';
+                } else {
+                    card.closest('.col-md-6').style.display = 'none';
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

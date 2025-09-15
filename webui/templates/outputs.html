@@ -1,0 +1,523 @@
+{% extends "base.html" %}
+
+{% block title %}创意相册 - Banana Gen Web UI{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="bi bi-images text-dark"></i>
+                创意相册
+            </h2>
+            <div>
+                <button class="btn btn-outline-dark me-2" onclick="refreshOutputs()">
+                    <i class="bi bi-arrow-clockwise"></i>
+                    刷新
+                </button>
+                <button class="btn btn-outline-dark me-2" onclick="toggleViewMode()">
+                    <i class="bi bi-grid-3x3-gap" id="viewModeIcon"></i>
+                    <span id="viewModeText">网格视图</span>
+                </button>
+                <button class="btn btn-dark" onclick="downloadAll()">
+                    <i class="bi bi-download"></i>
+                    批量下载
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 文件统计 -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-primary">{{ output_files|length }}</h5>
+                <p class="card-text">总文件数</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-success">{{ (output_files|sum(attribute='size') / 1024 / 1024)|round(2) }} MB</h5>
+                <p class="card-text">总大小</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-info">{{ output_files|selectattr('filename', 'match', '.*\\.png$')|list|length }}</h5>
+                <p class="card-text">PNG 文件</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-warning">{{ output_files|selectattr('filename', 'match', '.*\\.jpg$')|list|length }}</h5>
+                <p class="card-text">JPG 文件</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 相册视图切换 -->
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-dark active" id="gridViewBtn" onclick="switchView('grid')">
+                <i class="bi bi-grid-3x3-gap"></i> 网格视图
+            </button>
+            <button type="button" class="btn btn-outline-dark" id="listViewBtn" onclick="switchView('list')">
+                <i class="bi bi-list-ul"></i> 列表视图
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 文件列表 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-images"></i>
+                    创意作品
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if output_files %}
+                <!-- 网格视图 -->
+                <div id="gridView" class="row g-3">
+                    {% for file in output_files %}
+                    <div class="col-md-4 col-lg-3">
+                        <div class="card h-100 output-file-card gallery-item" data-filename="{{ file.filename }}">
+                            <div class="position-relative">
+                                <img src="/outputs/{{ file.filename }}" class="card-img-top" 
+                                     style="height: 200px; object-fit: cover; cursor: pointer;" 
+                                     onclick="previewFile('{{ file.filename }}')"
+                                     onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPuWbvueJh+WKoOi9vTwvdGV4dD48L3N2Zz4='">
+                                <div class="position-absolute top-0 end-0 m-2">
+                                    <span class="badge bg-dark">{{ (file.size / 1024)|round(1) }} KB</span>
+                                </div>
+                                <div class="position-absolute top-0 start-0 m-2">
+                                    <button class="btn btn-sm btn-outline-light" onclick="copyPrompt('{{ file.filename }}')" title="复制提示词">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body p-2">
+                                <h6 class="card-title small mb-1" title="{{ file.filename }}">
+                                    {{ file.filename[:20] }}{% if file.filename|length > 20 %}...{% endif %}
+                                </h6>
+                                <small class="text-muted">{{ file.modified }}</small>
+                            </div>
+                            <div class="card-footer bg-transparent p-2">
+                                <div class="btn-group w-100" role="group">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="previewFile('{{ file.filename }}')">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success" onclick="downloadFile('{{ file.filename }}')">
+                                        <i class="bi bi-download"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-info" onclick="viewMetadata('{{ file.filename }}')">
+                                        <i class="bi bi-info-circle"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteFile('{{ file.filename }}')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- 列表视图 -->
+                <div id="listView" class="d-none">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>预览</th>
+                                    <th>文件名</th>
+                                    <th>大小</th>
+                                    <th>修改时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for file in output_files %}
+                                <tr>
+                                    <td>
+                                        <img src="/outputs/{{ file.filename }}" 
+                                             style="width: 60px; height: 60px; object-fit: cover; border-radius: 5px;"
+                                             onclick="previewFile('{{ file.filename }}')"
+                                             onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2RkZCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTAiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj7lm77niYfliqDovb08L3RleHQ+PC9zdmc+'">
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <strong>{{ file.filename }}</strong>
+                                            <br>
+                                            <small class="text-muted">创意作品</small>
+                                        </div>
+                                    </td>
+                                    <td>{{ (file.size / 1024)|round(1) }} KB</td>
+                                    <td>{{ file.modified }}</td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button class="btn btn-sm btn-outline-primary" onclick="previewFile('{{ file.filename }}')">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-success" onclick="downloadFile('{{ file.filename }}')">
+                                                <i class="bi bi-download"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-info" onclick="copyPrompt('{{ file.filename }}')">
+                                                <i class="bi bi-clipboard"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" onclick="deleteFile('{{ file.filename }}')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-images text-muted" style="font-size: 4rem;"></i>
+                    <h5 class="text-muted mt-3">暂无创意作品</h5>
+                    <p class="text-muted">执行任务后将生成创意作品</p>
+                    <a href="/execute" class="btn btn-primary">
+                        <i class="bi bi-play"></i>
+                        开始创作
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 新的弹窗系统将通过 JavaScript 动态创建 -->
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentPreviewFile = null;
+    let selectedFiles = new Set();
+    let currentViewMode = 'grid'; // 'grid' or 'list'
+
+    function previewFile(filename) {
+        currentPreviewFile = filename;
+        const modalContent = `
+            <div class="text-center">
+                <img id="previewImage" src="/outputs/${filename}" class="img-fluid" style="max-height: 70vh;" 
+                     onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPuWbvueJh+WKoOi9vTwvdGV4dD48L3N2Zz4='">
+            </div>
+        `;
+        
+        const modalFooter = `
+            <button type="button" class="btn btn-success" onclick="downloadCurrentFile()">
+                <i class="bi bi-download"></i>
+                下载
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="customModal.close('previewModal')">关闭</button>
+        `;
+        
+        customModal.create('previewModal', `预览: ${filename}`, modalContent, modalFooter);
+        customModal.open('previewModal');
+    }
+
+    function downloadFile(filename) {
+        const link = document.createElement('a');
+        link.href = `/outputs/${filename}`;
+        link.download = filename;
+        link.click();
+    }
+
+    function downloadCurrentFile() {
+        if (currentPreviewFile) {
+            downloadFile(currentPreviewFile);
+            customModal.close('previewModal');
+        }
+    }
+
+    function viewMetadata(filename) {
+        // 调用后端 API 提取 PNG 元数据
+        fetch(`/api/outputs/${filename}/metadata`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showToast(data.error, 'danger');
+                    return;
+                }
+                
+                const fileInfo = data.file_info;
+                const metadata = data.metadata;
+                
+                let metadataHtml = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>文件信息</h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>文件名:</strong></td>
+                                    <td>${fileInfo.filename}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>大小:</strong></td>
+                                    <td>${(fileInfo.size / 1024).toFixed(1)} KB</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>修改时间:</strong></td>
+                                    <td>${fileInfo.modified}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>嵌入元数据</h6>
+                `;
+                
+                if (metadata && Object.keys(metadata).length > 0) {
+                    metadataHtml += `
+                        <table class="table table-sm">
+                    `;
+                    for (const [key, value] of Object.entries(metadata)) {
+                        metadataHtml += `
+                            <tr>
+                                <td><strong>${key}:</strong></td>
+                                <td>${value}</td>
+                            </tr>
+                        `;
+                    }
+                    metadataHtml += `</table>`;
+                } else {
+                    metadataHtml += `
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            此文件未包含嵌入元数据
+                        </div>
+                    `;
+                }
+                
+                metadataHtml += `
+                        </div>
+                    </div>
+                `;
+                
+                customModal.create('metadataModal', `元数据: ${filename}`, metadataHtml);
+                customModal.open('metadataModal');
+            })
+            .catch(error => {
+                showToast('获取元数据失败: ' + error.message, 'danger');
+            });
+    }
+
+    function copyPrompt(filename) {
+        // 调用后端 API 提取 PNG 元数据中的 prompt
+        fetch(`/api/outputs/${filename}/metadata`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showToast('获取提示词失败: ' + data.error, 'danger');
+                    return;
+                }
+                
+                const metadata = data.metadata;
+                let promptText = '';
+                
+                if (metadata && metadata.prompt) {
+                    promptText = metadata.prompt;
+                } else if (metadata && metadata.prompt_text) {
+                    promptText = metadata.prompt_text;
+                } else {
+                    promptText = `文件: ${filename}\n未找到嵌入的提示词信息`;
+                }
+                
+                // 复制到剪贴板
+                navigator.clipboard.writeText(promptText).then(() => {
+                    showToast('提示词已复制到剪贴板', 'success');
+                }).catch(() => {
+                    // 降级方案
+                    const textArea = document.createElement('textarea');
+                    textArea.value = promptText;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    showToast('提示词已复制到剪贴板', 'success');
+                });
+            })
+            .catch(error => {
+                showToast('获取提示词失败: ' + error.message, 'danger');
+            });
+    }
+
+    function switchView(mode) {
+        currentViewMode = mode;
+        
+        // 更新按钮状态
+        document.getElementById('gridViewBtn').classList.toggle('active', mode === 'grid');
+        document.getElementById('listViewBtn').classList.toggle('active', mode === 'list');
+        
+        // 切换视图
+        const gridView = document.getElementById('gridView');
+        const listView = document.getElementById('listView');
+        
+        if (mode === 'grid') {
+            gridView.classList.remove('d-none');
+            listView.classList.add('d-none');
+        } else {
+            gridView.classList.add('d-none');
+            listView.classList.remove('d-none');
+        }
+        
+        // 保存视图偏好
+        localStorage.setItem('galleryViewMode', mode);
+    }
+
+    function toggleViewMode() {
+        const newMode = currentViewMode === 'grid' ? 'list' : 'grid';
+        switchView(newMode);
+    }
+
+    function getFileInfo(filename) {
+        // 从页面数据中获取文件信息
+        const fileCards = document.querySelectorAll('.output-file-card');
+        for (let card of fileCards) {
+            if (card.dataset.filename === filename) {
+                const title = card.querySelector('.card-title').textContent;
+                const modified = card.querySelector('.text-muted').textContent;
+                const size = card.querySelector('.badge').textContent;
+                return {
+                    filename: title,
+                    size: size,
+                    modified: modified
+                };
+            }
+        }
+        return {
+            filename: filename,
+            size: '未知',
+            modified: '未知'
+        };
+    }
+
+    function deleteFile(filename) {
+        confirmAction(`确定要删除文件 "${filename}" 吗？`, () => {
+            // 这里应该调用后端 API 删除文件
+            showToast('删除文件功能需要后端支持', 'info');
+        });
+    }
+
+    function refreshOutputs() {
+        location.reload();
+    }
+
+    function downloadAll() {
+        // 批量下载所有文件
+        const files = Array.from(document.querySelectorAll('.output-file-card')).map(card => card.dataset.filename);
+        
+        if (files.length === 0) {
+            showToast('没有文件可下载', 'warning');
+            return;
+        }
+        
+        confirmAction(`确定要下载所有 ${files.length} 个文件吗？`, () => {
+            files.forEach((filename, index) => {
+                setTimeout(() => {
+                    downloadFile(filename);
+                }, index * 500); // 每500ms下载一个文件，避免浏览器限制
+            });
+            showToast(`开始批量下载 ${files.length} 个文件`, 'success');
+        });
+    }
+
+    // 文件选择功能和视图初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        // 恢复视图偏好
+        const savedViewMode = localStorage.getItem('galleryViewMode') || 'grid';
+        switchView(savedViewMode);
+        
+        const fileCards = document.querySelectorAll('.output-file-card');
+        
+        fileCards.forEach(card => {
+            card.addEventListener('click', function(e) {
+                if (e.target.closest('button')) return; // 忽略按钮点击
+                
+                const filename = this.dataset.filename;
+                if (selectedFiles.has(filename)) {
+                    selectedFiles.delete(filename);
+                    this.classList.remove('border-primary', 'bg-light');
+                } else {
+                    selectedFiles.add(filename);
+                    this.classList.add('border-primary', 'bg-light');
+                }
+                
+                updateSelectionStatus();
+            });
+        });
+    });
+
+    function updateSelectionStatus() {
+        const count = selectedFiles.size;
+        if (count > 0) {
+            showToast(`已选择 ${count} 个文件`, 'info');
+        }
+    }
+
+    // 键盘快捷键
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey || e.metaKey) {
+            switch (e.key) {
+                case 'a':
+                    e.preventDefault();
+                    selectAllFiles();
+                    break;
+                case 'd':
+                    e.preventDefault();
+                    downloadSelectedFiles();
+                    break;
+            }
+        }
+    });
+
+    function selectAllFiles() {
+        const fileCards = document.querySelectorAll('.output-file-card');
+        fileCards.forEach(card => {
+            const filename = card.dataset.filename;
+            selectedFiles.add(filename);
+            card.classList.add('border-primary', 'bg-light');
+        });
+        updateSelectionStatus();
+    }
+
+    function downloadSelectedFiles() {
+        if (selectedFiles.size === 0) {
+            showToast('请先选择要下载的文件', 'warning');
+            return;
+        }
+        
+        selectedFiles.forEach((filename, index) => {
+            setTimeout(() => {
+                downloadFile(filename);
+            }, index * 500);
+        });
+        
+        showToast(`开始下载 ${selectedFiles.size} 个选中文件`, 'success');
+        selectedFiles.clear();
+        
+        // 清除选择状态
+        document.querySelectorAll('.output-file-card').forEach(card => {
+            card.classList.remove('border-primary', 'bg-light');
+        });
+    }
+</script>
+{% endblock %}

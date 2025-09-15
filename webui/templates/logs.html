@@ -1,0 +1,283 @@
+{% extends "base.html" %}
+
+{% block title %}日志查看 - Banana Gen Web UI{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="bi bi-file-text-fill text-secondary"></i>
+                日志查看
+            </h2>
+            <div>
+                <button class="btn btn-outline-secondary me-2" onclick="refreshLogs()">
+                    <i class="bi bi-arrow-clockwise"></i>
+                    刷新
+                </button>
+                <button class="btn btn-secondary" onclick="clearLogs()">
+                    <i class="bi bi-trash"></i>
+                    清空日志
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 日志文件列表 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-list-ul"></i>
+                    日志文件列表
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if log_files %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>文件名</th>
+                                <th>类型</th>
+                                <th>大小</th>
+                                <th>修改时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log_file in log_files %}
+                            <tr>
+                                <td>
+                                    <i class="bi bi-{% if log_file.filename.endswith('.jsonl') %}file-text{% else %}file-earmark-text{% endif %} text-primary"></i>
+                                    {{ log_file.filename }}
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if log_file.filename.endswith('.jsonl') %}info{% else %}secondary{% endif %}">
+                                        {% if log_file.filename.endswith('.jsonl') %}JSONL{% else %}LOG{% endif %}
+                                    </span>
+                                </td>
+                                <td>{{ (log_file.size / 1024)|round(2) }} KB</td>
+                                <td>{{ log_file.modified }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="viewLog('{{ log_file.filename }}')">
+                                        <i class="bi bi-eye"></i>
+                                        查看
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success" onclick="downloadLog('{{ log_file.filename }}')">
+                                        <i class="bi bi-download"></i>
+                                        下载
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-file-text text-muted" style="font-size: 4rem;"></i>
+                    <h5 class="text-muted mt-3">暂无日志文件</h5>
+                    <p class="text-muted">执行任务后将生成日志文件</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 实时日志 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-activity"></i>
+                    实时日志
+                    <span class="badge bg-success ms-2" id="liveStatus">实时</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="liveLogs" class="bg-dark text-light p-3 rounded" style="height: 400px; overflow-y: auto;">
+                    <div class="text-muted">等待日志输出...</div>
+                </div>
+                <div class="mt-3">
+                    <button class="btn btn-outline-primary btn-sm" onclick="toggleLiveLogs()">
+                        <i class="bi bi-pause" id="liveToggleIcon"></i>
+                        <span id="liveToggleText">暂停</span>
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm ms-2" onclick="clearLiveLogs()">
+                        <i class="bi bi-trash"></i>
+                        清空
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 新的弹窗系统将通过 JavaScript 动态创建 -->
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let liveLogsEnabled = true;
+    let liveLogsInterval = null;
+    let currentLogFile = null;
+
+    // 页面加载时启动实时日志
+    document.addEventListener('DOMContentLoaded', function() {
+        startLiveLogs();
+    });
+
+    function startLiveLogs() {
+        if (liveLogsInterval) {
+            clearInterval(liveLogsInterval);
+        }
+        
+        liveLogsInterval = setInterval(() => {
+            if (liveLogsEnabled) {
+                fetch('/api/execute/logs')
+                    .then(response => response.json())
+                    .then(data => {
+                        updateLiveLogs(data.logs);
+                    })
+                    .catch(error => {
+                        console.error('获取实时日志失败:', error);
+                    });
+            }
+        }, 1000);
+    }
+
+    function updateLiveLogs(logs) {
+        const container = document.getElementById('liveLogs');
+        
+        if (logs.length === 0) {
+            container.innerHTML = '<div class="text-muted">等待日志输出...</div>';
+            return;
+        }
+        
+        const html = logs.map(log => {
+            let className = 'text-light';
+            if (log.includes('✅') || log.includes('成功')) {
+                className = 'text-success';
+            } else if (log.includes('❌') || log.includes('失败') || log.includes('错误')) {
+                className = 'text-danger';
+            } else if (log.includes('⚠️') || log.includes('警告')) {
+                className = 'text-warning';
+            } else if (log.includes('🔑') || log.includes('Key')) {
+                className = 'text-info';
+            }
+            
+            return `<div class="${className}">${log}</div>`;
+        }).join('');
+        
+        container.innerHTML = html;
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function toggleLiveLogs() {
+        liveLogsEnabled = !liveLogsEnabled;
+        const icon = document.getElementById('liveToggleIcon');
+        const text = document.getElementById('liveToggleText');
+        const status = document.getElementById('liveStatus');
+        
+        if (liveLogsEnabled) {
+            icon.className = 'bi bi-pause';
+            text.textContent = '暂停';
+            status.textContent = '实时';
+            status.className = 'badge bg-success ms-2';
+        } else {
+            icon.className = 'bi bi-play';
+            text.textContent = '继续';
+            status.textContent = '暂停';
+            status.className = 'badge bg-warning ms-2';
+        }
+    }
+
+    function clearLiveLogs() {
+        document.getElementById('liveLogs').innerHTML = '<div class="text-muted">等待日志输出...</div>';
+    }
+
+    function viewLog(filename) {
+        currentLogFile = filename;
+        
+        fetch(`/api/logs/${filename}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showToast(data.error, 'danger');
+                    return;
+                }
+                
+                const content = document.getElementById('logContent');
+                if (filename.endsWith('.jsonl')) {
+                    // JSONL 格式美化显示
+                    const lines = data.content.split('\n').filter(line => line.trim());
+                    const html = lines.map(line => {
+                        try {
+                            const json = JSON.parse(line);
+                            return `<div class="mb-2"><pre class="mb-0">${JSON.stringify(json, null, 2)}</pre></div>`;
+                        } catch (e) {
+                            return `<div class="mb-2">${line}</div>`;
+                        }
+                    }).join('');
+                    content.innerHTML = html;
+                } else {
+                    // 普通日志格式
+                    content.innerHTML = data.content.split('\n').map(line => 
+                        `<div>${line}</div>`
+                    ).join('');
+                }
+                
+                const modalFooter = `
+                    <button type="button" class="btn btn-secondary" onclick="customModal.close('logModal')">关闭</button>
+                    <button type="button" class="btn btn-primary" onclick="downloadCurrentLog()">
+                        <i class="bi bi-download"></i>
+                        下载
+                    </button>
+                `;
+                
+                customModal.create('logModal', `日志内容: ${filename}`, content.outerHTML, modalFooter);
+                customModal.open('logModal');
+            })
+            .catch(error => {
+                showToast('获取日志内容失败: ' + error.message, 'danger');
+            });
+    }
+
+    function downloadLog(filename) {
+        const link = document.createElement('a');
+        link.href = `/api/logs/${filename}`;
+        link.download = filename;
+        link.click();
+    }
+
+    function downloadCurrentLog() {
+        if (currentLogFile) {
+            downloadLog(currentLogFile);
+            customModal.close('logModal');
+        }
+    }
+
+    function refreshLogs() {
+        location.reload();
+    }
+
+    function clearLogs() {
+        confirmAction('确定要清空所有日志文件吗？此操作不可恢复！', () => {
+            // 这里应该调用后端 API 清空日志
+            showToast('清空日志功能需要后端支持', 'info');
+        });
+    }
+
+    // 页面卸载时清理定时器
+    window.addEventListener('beforeunload', function() {
+        if (liveLogsInterval) {
+            clearInterval(liveLogsInterval);
+        }
+    });
+</script>
+{% endblock %}

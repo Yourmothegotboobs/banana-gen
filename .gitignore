@@ -1,0 +1,97 @@
+# API Keys - 敏感信息
+keys/
+api_keys_*.txt
+valid_keys.txt
+invalid_keys.txt
+image_gen_keys.txt
+output/
+*.json
+prompt/
+prompts/
+output/
+outputs/
+example/
+example/outputs/
+*.txt/
+other tools/
+samples/
+
+# 日志文件 - 可能包含敏感信息
+logs/
+*.log
+records.jsonl
+
+# 状态文件 - 运行时生成
+.banana-gen/
+state.json
+
+# 输出文件 - 生成的图片
+output/
+generated/
+results/
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# 虚拟环境
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE 文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 系统文件
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 临时文件
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# 用户配置
+config.json
+settings.json
+user_config.json
+
+# 测试文件
+test_*.py
+*_test.py
+tests/
+
+# 文档生成
+docs/_build/
+site/

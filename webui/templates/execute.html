@@ -1,0 +1,664 @@
+{% extends "base.html" %}
+
+{% block title %}任务执行 - Banana Gen Web UI{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="bi bi-play-circle-fill text-warning"></i>
+                任务执行
+            </h2>
+            <div>
+                <button class="btn btn-outline-warning me-2" onclick="clearAll()">
+                    <i class="bi bi-arrow-clockwise"></i>
+                    清空配置
+                </button>
+                <button class="btn btn-warning" onclick="executeTasks()" id="executeBtn">
+                    <i class="bi bi-play-fill"></i>
+                    开始执行
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 执行状态 -->
+<div class="row mb-4" id="executionStatus" style="display: none;">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-activity"></i>
+                    执行状态
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="h4 text-primary" id="totalTasks">0</div>
+                            <small class="text-muted">总任务数</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="h4 text-success" id="completedTasks">0</div>
+                            <small class="text-muted">已完成</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="h4 text-danger" id="failedTasks">0</div>
+                            <small class="text-muted">失败</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="h4 text-info" id="progressPercent">0%</div>
+                            <small class="text-muted">进度</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <div class="progress">
+                        <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 任务配置 -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-gear"></i>
+                    任务配置
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Prompt 选择 -->
+                <div class="mb-4">
+                    <label for="promptSelect" class="form-label">选择 Prompt</label>
+                    <select class="form-select" id="promptSelect" onchange="updatePromptInfo()">
+                        <option value="">请选择 Prompt</option>
+                        {% for prompt in prompts %}
+                        <option value="{{ prompt.id }}" data-input-count="{{ prompt.input_count }}">
+                            {{ prompt.id }} ({{ prompt.input_count }} 输入图)
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <div id="promptInfo" class="mt-2" style="display: none;">
+                        <!-- 动态显示 Prompt 信息 -->
+                    </div>
+                </div>
+
+                <!-- 图片来源配置 -->
+                <div class="mb-4">
+                    <label class="form-label">图片来源配置</label>
+                    <div id="inputSources">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i>
+                            请先选择 Prompt，然后配置对应的图片来源
+                        </div>
+                    </div>
+                    <button class="btn btn-outline-info btn-sm" onclick="addInputSource()">
+                        <i class="bi bi-plus"></i>
+                        添加图片来源
+                    </button>
+                </div>
+
+                <!-- 替换词配置 -->
+                <div class="mb-4">
+                    <label class="form-label">替换词配置</label>
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <input type="text" class="form-control" id="replaceKey" placeholder="占位符名称">
+                        </div>
+                        <div class="col-md-6">
+                            <input type="text" class="form-control" id="replaceValue" placeholder="替换值">
+                        </div>
+                    </div>
+                    <button class="btn btn-outline-success btn-sm mt-2" onclick="addReplacement()">
+                        <i class="bi bi-plus"></i>
+                        添加替换词
+                    </button>
+                    <div id="replacements" class="mt-2">
+                        <!-- 动态显示替换词 -->
+                    </div>
+                </div>
+
+                <!-- 批量替换词 -->
+                <div class="mb-4">
+                    <label class="form-label">批量替换词</label>
+                    <div class="mb-2">
+                        <input type="text" class="form-control" id="batchReplaceKey" placeholder="占位符名称">
+                    </div>
+                    <div class="mb-2">
+                        <textarea class="form-control" id="batchReplaceValues" rows="3" placeholder="每行一个替换值"></textarea>
+                    </div>
+                    <button class="btn btn-outline-warning btn-sm" onclick="addBatchReplacements()">
+                        <i class="bi bi-plus"></i>
+                        添加批量替换
+                    </button>
+                    <div id="batchReplacements" class="mt-2">
+                        <!-- 动态显示批量替换词 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-sliders"></i>
+                    执行设置
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- 输出设置 -->
+                <div class="mb-4">
+                    <h6>输出设置</h6>
+                    <div class="mb-3">
+                        <label for="outputDir" class="form-label">输出目录</label>
+                        <input type="text" class="form-control" id="outputDir" value="webui/outputs">
+                    </div>
+                    <div class="mb-3">
+                        <label for="pathStrategy" class="form-label">路径策略</label>
+                        <select class="form-select" id="pathStrategy">
+                            <option value="A">统一路径</option>
+                            <option value="B">按替换词分路径</option>
+                            <option value="C">同路径下分子目录</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="filenameTemplate" class="form-label">文件名模板</label>
+                        <input type="text" class="form-control" id="filenameTemplate" 
+                               value="{base}-{promptId}-{date}-{time}.png">
+                        <div class="form-text">支持占位符：{base}, {promptId}, {date}, {time}, {microsecond}, {thread_id}</div>
+                    </div>
+                </div>
+
+                <!-- 执行设置 -->
+                <div class="mb-4">
+                    <h6>执行设置</h6>
+                    <div class="mb-3">
+                        <label for="maxWorkers" class="form-label">并发数</label>
+                        <input type="number" class="form-control" id="maxWorkers" value="3" min="1" max="10">
+                    </div>
+                    <div class="mb-3">
+                        <label for="maxRetries" class="form-label">最大重试次数</label>
+                        <input type="number" class="form-control" id="maxRetries" value="3" min="1" max="10">
+                    </div>
+                </div>
+
+                <!-- 任务预览 -->
+                <div class="mb-4">
+                    <h6>任务预览</h6>
+                    <div id="taskPreview" class="bg-light p-3 rounded">
+                        <p class="text-muted mb-0">配置完成后将显示任务预览</p>
+                    </div>
+                    <button class="btn btn-outline-primary btn-sm mt-2" onclick="buildPlan()">
+                        <i class="bi bi-eye"></i>
+                        构建计划
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 执行日志 -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-terminal"></i>
+                    执行日志
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="executionLogs" class="bg-dark text-light p-3 rounded" style="height: 300px; overflow-y: auto;">
+                    <div class="text-muted">等待任务执行...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 新的弹窗系统将通过 JavaScript 动态创建 -->
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentPlan = null;
+    let executionInterval = null;
+    let inputSources = [];
+    let replacements = {};
+    let batchReplacements = [];
+
+    // 页面加载时检查 URL 参数
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const promptId = urlParams.get('prompt');
+        const sourcesJson = urlParams.get('sources');
+        
+        if (promptId) {
+            document.getElementById('promptSelect').value = promptId;
+            updatePromptInfo();
+        }
+        
+        if (sourcesJson) {
+            try {
+                const sources = JSON.parse(decodeURIComponent(sourcesJson));
+                inputSources = sources;
+                updateInputSourcesDisplay();
+            } catch (e) {
+                console.error('解析图片来源配置失败:', e);
+            }
+        }
+    });
+
+    // 页面卸载时清理定时器
+    window.addEventListener('beforeunload', function() {
+        if (executionInterval) {
+            clearInterval(executionInterval);
+            executionInterval = null;
+        }
+    });
+
+    function updatePromptInfo() {
+        const select = document.getElementById('promptSelect');
+        const selectedOption = select.options[select.selectedIndex];
+        const promptInfo = document.getElementById('promptInfo');
+        
+        if (selectedOption.value) {
+            const inputCount = parseInt(selectedOption.dataset.inputCount);
+            promptInfo.innerHTML = `
+                <div class="alert alert-info">
+                    <strong>${selectedOption.value}</strong><br>
+                    需要 ${inputCount} 个输入图
+                </div>
+            `;
+            promptInfo.style.display = 'block';
+            updateInputSourcesDisplay();
+        } else {
+            promptInfo.style.display = 'none';
+        }
+    }
+
+    function updateInputSourcesDisplay() {
+        const container = document.getElementById('inputSources');
+        const select = document.getElementById('promptSelect');
+        const inputCount = parseInt(select.options[select.selectedIndex]?.dataset.inputCount || 0);
+        
+        if (inputCount === 0) {
+            container.innerHTML = '<div class="alert alert-success"><i class="bi bi-check-circle"></i> 此 Prompt 不需要输入图</div>';
+            return;
+        }
+        
+        let html = '';
+        for (let i = 0; i < inputCount; i++) {
+            const source = inputSources[i] || {};
+            html += `
+                <div class="mb-2">
+                    <label class="form-label">输入图 ${i + 1}</label>
+                    <div class="input-group">
+                        <select class="form-select" onchange="updateInputSource(${i}, this.value)">
+                            <option value="">请选择图片来源类型</option>
+                            <option value="local" ${source.type === 'local' ? 'selected' : ''}>本地文件</option>
+                            <option value="url" ${source.type === 'url' ? 'selected' : ''}>网络链接</option>
+                            <option value="folder" ${source.type === 'folder' ? 'selected' : ''}>文件夹序列</option>
+                            <option value="recursive" ${source.type === 'recursive' ? 'selected' : ''}>递归文件夹</option>
+                        </select>
+                        <input type="text" class="form-control" placeholder="路径或URL" 
+                               value="${source.path || source.url || ''}" 
+                               onchange="updateInputSourcePath(${i}, this.value)">
+                        <button class="btn btn-outline-danger" onclick="removeInputSource(${i})">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        if (inputSources.length < inputCount) {
+            html += `
+                <div class="text-center">
+                    <button class="btn btn-outline-info btn-sm" onclick="openAddSourceModal()">
+                        <i class="bi bi-plus"></i>
+                        添加图片来源
+                    </button>
+                </div>
+            `;
+        }
+        
+        container.innerHTML = html;
+    }
+
+    function updateInputSource(index, type) {
+        if (!inputSources[index]) {
+            inputSources[index] = {};
+        }
+        inputSources[index].type = type;
+    }
+
+    function updateInputSourcePath(index, path) {
+        if (!inputSources[index]) {
+            inputSources[index] = {};
+        }
+        if (inputSources[index].type === 'url') {
+            inputSources[index].url = path;
+        } else {
+            inputSources[index].path = path;
+        }
+    }
+
+    function removeInputSource(index) {
+        inputSources.splice(index, 1);
+        updateInputSourcesDisplay();
+    }
+
+    function addReplacement() {
+        const key = document.getElementById('replaceKey').value.trim();
+        const value = document.getElementById('replaceValue').value.trim();
+        
+        if (key && value) {
+            replacements[key] = value;
+            updateReplacementsDisplay();
+            document.getElementById('replaceKey').value = '';
+            document.getElementById('replaceValue').value = '';
+        }
+    }
+
+    function updateReplacementsDisplay() {
+        const container = document.getElementById('replacements');
+        const entries = Object.entries(replacements);
+        
+        if (entries.length === 0) {
+            container.innerHTML = '<small class="text-muted">暂无替换词</small>';
+            return;
+        }
+        
+        const html = entries.map(([key, value]) => `
+            <span class="badge bg-primary me-2 mb-1">
+                {${key}} → ${value}
+                <button class="btn-close btn-close-white ms-1" onclick="removeReplacement('${key}')"></button>
+            </span>
+        `).join('');
+        
+        container.innerHTML = html;
+    }
+
+    function removeReplacement(key) {
+        delete replacements[key];
+        updateReplacementsDisplay();
+    }
+
+    function addBatchReplacements() {
+        const key = document.getElementById('batchReplaceKey').value.trim();
+        const values = document.getElementById('batchReplaceValues').value.trim().split('\n').filter(v => v.trim());
+        
+        if (key && values.length > 0) {
+            batchReplacements.push({ key, values });
+            updateBatchReplacementsDisplay();
+            document.getElementById('batchReplaceKey').value = '';
+            document.getElementById('batchReplaceValues').value = '';
+        }
+    }
+
+    function updateBatchReplacementsDisplay() {
+        const container = document.getElementById('batchReplacements');
+        
+        if (batchReplacements.length === 0) {
+            container.innerHTML = '<small class="text-muted">暂无批量替换词</small>';
+            return;
+        }
+        
+        const html = batchReplacements.map((item, index) => `
+            <div class="alert alert-warning">
+                <strong>{${item.key}}:</strong> ${item.values.join(', ')}
+                <button class="btn btn-sm btn-outline-danger float-end" onclick="removeBatchReplacement(${index})">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        `).join('');
+        
+        container.innerHTML = html;
+    }
+
+    function removeBatchReplacement(index) {
+        batchReplacements.splice(index, 1);
+        updateBatchReplacementsDisplay();
+    }
+
+    function buildPlan() {
+        const promptId = document.getElementById('promptSelect').value;
+        if (!promptId) {
+            showToast('请先选择 Prompt', 'warning');
+            return;
+        }
+        
+        const config = {
+            prompt_id: promptId,
+            input_sources: inputSources,
+            replacements: Object.keys(replacements).length > 0 ? replacements : null,
+            replacement_sets: batchReplacements.length > 0 ? batchReplacements.map(item => ({[item.key]: item.values[0]})) : null,
+            output: {
+                base_dir: document.getElementById('outputDir').value,
+                strategy: document.getElementById('pathStrategy').value,
+                token_group_id: 'default'
+            },
+            filename_template: document.getElementById('filenameTemplate').value
+        };
+        
+        fetch('/api/execute/build_plan', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(config)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                currentPlan = data;
+                updateTaskPreview(data);
+                showToast(`计划构建成功，共 ${data.task_count} 个任务`, 'success');
+            } else {
+                showToast(data.error || '构建计划失败', 'danger');
+            }
+        })
+        .catch(error => {
+            showToast('构建计划失败: ' + error.message, 'danger');
+        });
+    }
+
+    function updateTaskPreview(plan) {
+        const container = document.getElementById('taskPreview');
+        container.innerHTML = `
+            <div class="alert alert-success">
+                <strong>计划构建成功</strong><br>
+                任务数量: ${plan.task_count}<br>
+                前几个任务:
+            </div>
+            <div class="mt-2">
+                ${plan.tasks.slice(0, 3).map(task => `
+                    <div class="small text-muted">${task.prompt_id}: ${task.output_path}</div>
+                `).join('')}
+                ${plan.tasks.length > 3 ? '<div class="small text-muted">...</div>' : ''}
+            </div>
+        `;
+    }
+
+    function executeTasks() {
+        if (!currentPlan) {
+            showToast('请先构建计划', 'warning');
+            return;
+        }
+        
+        const executeBtn = document.getElementById('executeBtn');
+        const originalText = showLoading(executeBtn, '执行中...');
+        
+        const config = {
+            max_workers: parseInt(document.getElementById('maxWorkers').value),
+            max_retries: parseInt(document.getElementById('maxRetries').value)
+        };
+        
+        fetch('/api/execute/start', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(config)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('任务开始执行', 'success');
+                document.getElementById('executionStatus').style.display = 'block';
+                startExecutionMonitoring();
+            } else {
+                hideLoading(executeBtn, originalText);
+                showToast(data.error || '启动执行失败', 'danger');
+            }
+        })
+        .catch(error => {
+            hideLoading(executeBtn, originalText);
+            showToast('启动执行失败: ' + error.message, 'danger');
+        });
+    }
+
+    function startExecutionMonitoring() {
+        // 清除现有的定时器，避免重复请求
+        if (executionInterval) {
+            clearInterval(executionInterval);
+        }
+        
+        executionInterval = setInterval(() => {
+            fetch('/api/execute/status')
+                .then(response => response.json())
+                .then(data => {
+                    updateExecutionStatus(data);
+                })
+                .catch(error => {
+                    console.error('获取执行状态失败:', error);
+                });
+            
+            fetch('/api/execute/logs')
+                .then(response => response.json())
+                .then(data => {
+                    updateExecutionLogs(data.logs);
+                })
+                .catch(error => {
+                    console.error('获取执行日志失败:', error);
+                });
+        }, 2000); // 增加间隔时间到2秒，减少请求频率
+    }
+
+    function updateExecutionStatus(status) {
+        document.getElementById('totalTasks').textContent = status.total || 0;
+        document.getElementById('completedTasks').textContent = status.completed || 0;
+        document.getElementById('failedTasks').textContent = status.failed || 0;
+        
+        const total = status.total || 1;
+        const completed = status.completed || 0;
+        const percent = Math.round((completed / total) * 100);
+        
+        document.getElementById('progressPercent').textContent = percent + '%';
+        document.getElementById('progressBar').style.width = percent + '%';
+        
+        if (!status.running) {
+            clearInterval(executionInterval);
+            const executeBtn = document.getElementById('executeBtn');
+            executeBtn.innerHTML = '<i class="bi bi-play-fill"></i> 开始执行';
+            executeBtn.disabled = false;
+        }
+    }
+
+    function updateExecutionLogs(logs) {
+        const container = document.getElementById('executionLogs');
+        container.innerHTML = logs.map(log => `<div>${log}</div>`).join('');
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function clearAll() {
+        confirmAction('确定要清空所有配置吗？', () => {
+            document.getElementById('promptSelect').value = '';
+            inputSources = [];
+            replacements = {};
+            batchReplacements = [];
+            currentPlan = null;
+            
+            updatePromptInfo();
+            updateInputSourcesDisplay();
+            updateReplacementsDisplay();
+            updateBatchReplacementsDisplay();
+            document.getElementById('taskPreview').innerHTML = '<p class="text-muted mb-0">配置完成后将显示任务预览</p>';
+            document.getElementById('executionStatus').style.display = 'none';
+            
+            showToast('配置已清空', 'success');
+        });
+    }
+
+    function openAddSourceModal() {
+        const modalContent = `
+            <form id="addSourceForm">
+                <div class="mb-3">
+                    <label for="sourceType" class="form-label">图片来源类型</label>
+                    <select class="form-select" id="sourceType" onchange="updateSourceForm()">
+                        <option value="local">本地文件</option>
+                        <option value="url">网络链接</option>
+                        <option value="folder">文件夹序列</option>
+                        <option value="recursive">递归文件夹</option>
+                    </select>
+                </div>
+                <div id="sourceConfig">
+                    <div class="mb-3">
+                        <label for="sourcePath" class="form-label">路径/URL</label>
+                        <input type="text" class="form-control" id="sourcePath" required>
+                    </div>
+                </div>
+            </form>
+        `;
+        
+        const modalFooter = `
+            <button type="button" class="btn btn-secondary" onclick="customModal.close('addSourceModal')">取消</button>
+            <button type="button" class="btn btn-primary" onclick="addSourceToConfig()">添加</button>
+        `;
+        
+        customModal.create('addSourceModal', '添加图片来源', modalContent, modalFooter);
+        customModal.open('addSourceModal');
+    }
+
+    function addSourceToConfig() {
+        const type = document.getElementById('sourceType').value;
+        const path = document.getElementById('sourcePath').value;
+        
+        if (!path) {
+            showToast('请输入路径或URL', 'warning');
+            return;
+        }
+        
+        const source = { type };
+        if (type === 'url') {
+            source.url = path;
+        } else {
+            source.path = path;
+        }
+        
+        inputSources.push(source);
+        updateInputSourcesDisplay();
+        customModal.close('addSourceModal');
+        showToast('图片来源已添加', 'success');
+    }
+</script>
+{% endblock %}

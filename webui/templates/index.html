@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block title %}首页 - Banana Gen Web UI{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="text-center mb-5">
+            <h1 class="display-4 fw-bold text-primary">
+                <i class="bi bi-lightning-charge-fill"></i>
+                Banana Gen Web UI
+            </h1>
+            <p class="lead text-muted">统一的图像生成管理框架</p>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Key 管理卡片 -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i class="bi bi-key-fill text-primary" style="font-size: 3rem;"></i>
+                </div>
+                <h5 class="card-title">Key 管理</h5>
+                <p class="card-text">管理多级优先级的 API Key，支持自动故障转移和负载均衡</p>
+                <a href="/keys" class="btn btn-primary">
+                    <i class="bi bi-arrow-right"></i> 进入管理
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Prompt 管理卡片 -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i class="bi bi-chat-text-fill text-success" style="font-size: 3rem;"></i>
+                </div>
+                <h5 class="card-title">Prompt 管理</h5>
+                <p class="card-text">按输入图数量分类管理 Prompt，支持占位符替换和批量处理</p>
+                <a href="/prompts" class="btn btn-success">
+                    <i class="bi bi-arrow-right"></i> 进入管理
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 图片来源管理卡片 -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i class="bi bi-image-fill text-info" style="font-size: 3rem;"></i>
+                </div>
+                <h5 class="card-title">图片来源管理</h5>
+                <p class="card-text">灵活配置图片来源：本地文件、网络链接、文件夹序列等</p>
+                <a href="/sources" class="btn btn-info">
+                    <i class="bi bi-arrow-right"></i> 进入管理
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 任务执行卡片 -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i class="bi bi-play-circle-fill text-warning" style="font-size: 3rem;"></i>
+                </div>
+                <h5 class="card-title">任务执行</h5>
+                <p class="card-text">构建和执行图像生成任务，支持并发处理和实时监控</p>
+                <a href="/execute" class="btn btn-warning">
+                    <i class="bi bi-arrow-right"></i> 进入管理
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 日志查看卡片 -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i class="bi bi-file-text-fill text-secondary" style="font-size: 3rem;"></i>
+                </div>
+                <h5 class="card-title">日志查看</h5>
+                <p class="card-text">查看系统日志、执行记录和错误信息，支持实时监控</p>
+                <a href="/logs" class="btn btn-secondary">
+                    <i class="bi bi-arrow-right"></i> 进入管理
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 创意相册卡片 -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i class="bi bi-images text-dark" style="font-size: 3rem;"></i>
+                </div>
+                <h5 class="card-title">创意相册</h5>
+                <p class="card-text">画廊式展示历史作品，支持预览、下载和提示词复制</p>
+                <a href="/outputs" class="btn btn-dark">
+                    <i class="bi bi-arrow-right"></i> 进入相册
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 系统状态 -->
+<div class="row mt-5">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-activity"></i>
+                    系统状态
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="h4 text-primary" id="key-status">
+                                <i class="bi bi-key"></i>
+                                <span>Key 状态</span>
+                            </div>
+                            <small class="text-muted">API Key 可用性</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="h4 text-success" id="prompt-status">
+                                <i class="bi bi-chat-text"></i>
+                                <span>Prompt 状态</span>
+                            </div>
+                            <small class="text-muted">Prompt 注册表</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="h4 text-info" id="execution-status">
+                                <i class="bi bi-play-circle"></i>
+                                <span>执行状态</span>
+                            </div>
+                            <small class="text-muted">任务执行状态</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="h4 text-warning" id="system-status">
+                                <i class="bi bi-cpu"></i>
+                                <span>系统状态</span>
+                            </div>
+                            <small class="text-muted">整体运行状态</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 快速操作 -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-lightning"></i>
+                    快速操作
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <button class="btn btn-outline-primary w-100" onclick="quickUploadKeys()">
+                            <i class="bi bi-upload"></i>
+                            快速上传 Keys
+                        </button>
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-outline-success w-100" onclick="quickStartTask()">
+                            <i class="bi bi-play-fill"></i>
+                            快速开始任务
+                        </button>
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-outline-info w-100" onclick="quickViewLogs()">
+                            <i class="bi bi-eye"></i>
+                            快速查看日志
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 页面加载时检查系统状态
+    document.addEventListener('DOMContentLoaded', function() {
+        checkSystemStatus();
+        
+        // 每30秒更新一次状态
+        setInterval(checkSystemStatus, 30000);
+    });
+
+    function checkSystemStatus() {
+        // 检查 Key 状态
+        fetch('/api/execute/status')
+            .then(response => response.json())
+            .then(data => {
+                const keyStatus = document.getElementById('key-status');
+                if (data.error) {
+                    keyStatus.innerHTML = '<i class="bi bi-key text-danger"></i> <span>Key 未配置</span>';
+                } else {
+                    keyStatus.innerHTML = '<i class="bi bi-key text-success"></i> <span>Key 正常</span>';
+                }
+            })
+            .catch(() => {
+                document.getElementById('key-status').innerHTML = '<i class="bi bi-key text-warning"></i> <span>状态未知</span>';
+            });
+
+        // 检查执行状态
+        fetch('/api/execute/status')
+            .then(response => response.json())
+            .then(data => {
+                const execStatus = document.getElementById('execution-status');
+                if (data.running) {
+                    execStatus.innerHTML = '<i class="bi bi-play-circle text-warning"></i> <span>执行中</span>';
+                } else {
+                    execStatus.innerHTML = '<i class="bi bi-play-circle text-success"></i> <span>空闲</span>';
+                }
+            })
+            .catch(() => {
+                document.getElementById('execution-status').innerHTML = '<i class="bi bi-play-circle text-secondary"></i> <span>状态未知</span>';
+            });
+    }
+
+    function quickUploadKeys() {
+        window.location.href = '/keys';
+    }
+
+    function quickStartTask() {
+        window.location.href = '/execute';
+    }
+
+    function quickViewLogs() {
+        window.location.href = '/logs';
+    }
+</script>
+{% endblock %}

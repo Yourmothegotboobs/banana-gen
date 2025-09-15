@@ -13,7 +13,6 @@ example/outputs/
 *.txt/
 other tools/
 samples/
-example/demo_nested_workflow.py
 
 
 # 日志文件 - 可能包含敏感信息

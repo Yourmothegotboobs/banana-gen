@@ -1,0 +1,363 @@
+{% extends "base_new.html" %}
+
+{% block title %}系统状态 - Banana Gen Web UI{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="bi bi-activity text-primary"></i>
+                系统状态
+            </h2>
+            <div>
+                <button class="btn btn-outline-primary" onclick="refreshStatus()">
+                    <i class="bi bi-arrow-clockwise"></i> 刷新
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 系统概览 -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="mb-3">
+                    <i class="bi bi-cpu text-primary" style="font-size: 2rem;"></i>
+                </div>
+                <h5 class="card-title">生成器状态</h5>
+                <div class="h4" id="generator-status">
+                    <span class="status-indicator" id="generator-indicator"></span>
+                    <span id="generator-text">检查中...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="mb-3">
+                    <i class="bi bi-chat-text text-success" style="font-size: 2rem;"></i>
+                </div>
+                <h5 class="card-title">Prompt 注册表</h5>
+                <div class="h4" id="prompt-status">
+                    <span class="status-indicator" id="prompt-indicator"></span>
+                    <span id="prompt-text">检查中...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="mb-3">
+                    <i class="bi bi-play-circle text-info" style="font-size: 2rem;"></i>
+                </div>
+                <h5 class="card-title">任务状态</h5>
+                <div class="h4" id="task-status">
+                    <span class="status-indicator" id="task-indicator"></span>
+                    <span id="task-text">检查中...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="mb-3">
+                    <i class="bi bi-gear text-warning" style="font-size: 2rem;"></i>
+                </div>
+                <h5 class="card-title">执行状态</h5>
+                <div class="h4" id="execution-status">
+                    <span class="status-indicator" id="execution-indicator"></span>
+                    <span id="execution-text">检查中...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 详细状态信息 -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-cpu"></i>
+                    生成器详细信息
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="generator-details">
+                    <div class="text-center text-muted">
+                        <i class="bi bi-hourglass-split"></i>
+                        加载中...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-chat-text"></i>
+                    Prompt 注册表信息
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="prompt-details">
+                    <div class="text-center text-muted">
+                        <i class="bi bi-hourglass-split"></i>
+                        加载中...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 任务执行统计 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-bar-chart"></i>
+                    任务执行统计
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="execution-stats">
+                    <div class="text-center text-muted">
+                        <i class="bi bi-hourglass-split"></i>
+                        加载中...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 系统日志 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-terminal"></i>
+                    系统日志
+                </h5>
+                <div>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="clearLogs()">
+                        <i class="bi bi-trash"></i> 清空
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm" onclick="refreshLogs()">
+                        <i class="bi bi-arrow-clockwise"></i> 刷新
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="log-container" id="system-logs">
+                    <div class="log-entry log-info">系统启动中...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let statusInterval;
+    
+    // 刷新状态
+    function refreshStatus() {
+        fetch('/api/status')
+            .then(response => response.json())
+            .then(data => {
+                updateSystemStatus(data);
+            })
+            .catch(error => {
+                console.error('获取状态失败:', error);
+                showMessage('获取系统状态失败', 'danger');
+            });
+    }
+    
+    // 更新系统状态
+    function updateSystemStatus(data) {
+        // 更新生成器状态
+        updateComponentStatus('generator', data.generator, 'UnifiedImageGenerator');
+        
+        // 更新 Prompt 状态
+        updateComponentStatus('prompt', data.prompt_registry, 'PromptRegistry');
+        
+        // 更新任务状态
+        updateComponentStatus('task', data.current_task, 'TaskManager');
+        
+        // 更新执行状态
+        const isRunning = data.execution_status && data.execution_status.running;
+        updateComponentStatus('execution', !isRunning, 'Execution');
+        
+        // 更新详细信息
+        updateGeneratorDetails(data);
+        updatePromptDetails(data);
+        updateExecutionStats(data);
+    }
+    
+    // 更新组件状态
+    function updateComponentStatus(component, isOnline, componentName) {
+        const indicator = document.getElementById(`${component}-indicator`);
+        const text = document.getElementById(`${component}-text`);
+        
+        if (isOnline) {
+            indicator.className = 'status-indicator status-online';
+            text.textContent = '正常';
+        } else {
+            indicator.className = 'status-indicator status-offline';
+            text.textContent = '离线';
+        }
+    }
+    
+    // 更新生成器详细信息
+    function updateGeneratorDetails(data) {
+        const container = document.getElementById('generator-details');
+        
+        if (!data.generator) {
+            container.innerHTML = '<div class="text-center text-danger"><i class="bi bi-exclamation-triangle"></i> 生成器未初始化</div>';
+            return;
+        }
+        
+        const stats = data.generator_stats || {};
+        container.innerHTML = `
+            <div class="row g-3">
+                <div class="col-6">
+                    <div class="text-center">
+                        <div class="h5 text-primary">${stats.total_requests || 0}</div>
+                        <small class="text-muted">总请求数</small>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="text-center">
+                        <div class="h5 text-success">${stats.successful_requests || 0}</div>
+                        <small class="text-muted">成功请求</small>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="text-center">
+                        <div class="h5 text-danger">${stats.failed_requests || 0}</div>
+                        <small class="text-muted">失败请求</small>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="text-center">
+                        <div class="h5 text-warning">${stats.key_switches || 0}</div>
+                        <small class="text-muted">Key 切换次数</small>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    // 更新 Prompt 详细信息
+    function updatePromptDetails(data) {
+        const container = document.getElementById('prompt-details');
+        
+        if (!data.prompt_registry) {
+            container.innerHTML = '<div class="text-center text-danger"><i class="bi bi-exclamation-triangle"></i> Prompt 注册表未初始化</div>';
+            return;
+        }
+        
+        const promptCount = data.prompt_count || 0;
+        container.innerHTML = `
+            <div class="text-center">
+                <div class="h2 text-success">${promptCount}</div>
+                <p class="text-muted">已加载的 Prompt 数量</p>
+                <div class="mt-3">
+                    <span class="badge bg-primary me-2">JSON 格式</span>
+                    <span class="badge bg-success">按输入图数量分类</span>
+                </div>
+            </div>
+        `;
+    }
+    
+    // 更新执行统计
+    function updateExecutionStats(data) {
+        const container = document.getElementById('execution-stats');
+        const execStatus = data.execution_status || {};
+        
+        const total = execStatus.total || 0;
+        const completed = execStatus.completed || 0;
+        const failed = execStatus.failed || 0;
+        const progress = total > 0 ? Math.round((completed + failed) / total * 100) : 0;
+        
+        container.innerHTML = `
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <div class="h4 text-primary">${total}</div>
+                        <small class="text-muted">总任务数</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <div class="h4 text-success">${completed}</div>
+                        <small class="text-muted">已完成</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <div class="h4 text-danger">${failed}</div>
+                        <small class="text-muted">失败</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <div class="h4 text-info">${progress}%</div>
+                        <small class="text-muted">进度</small>
+                    </div>
+                </div>
+            </div>
+            <div class="progress mt-3" style="height: 10px;">
+                <div class="progress-bar ${progress === 100 ? 'bg-success' : 'bg-primary'}" 
+                     style="width: ${progress}%"></div>
+            </div>
+        `;
+    }
+    
+    // 清空日志
+    function clearLogs() {
+        document.getElementById('system-logs').innerHTML = '<div class="log-entry log-info">日志已清空</div>';
+    }
+    
+    // 刷新日志
+    function refreshLogs() {
+        // 这里可以添加获取系统日志的逻辑
+        const logsContainer = document.getElementById('system-logs');
+        const now = new Date().toLocaleTimeString();
+        logsContainer.innerHTML += `<div class="log-entry log-info">[${now}] 日志已刷新</div>`;
+        logsContainer.scrollTop = logsContainer.scrollHeight;
+    }
+    
+    // 页面加载时开始状态监控
+    document.addEventListener('DOMContentLoaded', function() {
+        refreshStatus();
+        
+        // 每10秒自动刷新状态
+        statusInterval = setInterval(refreshStatus, 10000);
+    });
+    
+    // 页面卸载时清理定时器
+    window.addEventListener('beforeunload', function() {
+        if (statusInterval) {
+            clearInterval(statusInterval);
+        }
+    });
+</script>
+{% endblock %}

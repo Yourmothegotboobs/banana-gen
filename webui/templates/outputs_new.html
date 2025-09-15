@@ -1,0 +1,335 @@
+{% extends "base_new.html" %}
+
+{% block title %}输出文件 - Banana Gen Web UI{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="bi bi-folder text-primary"></i>
+                输出文件
+            </h2>
+            <div>
+                <button class="btn btn-outline-primary" onclick="refreshOutputs()">
+                    <i class="bi bi-arrow-clockwise"></i> 刷新
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 文件统计 -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="h4 text-primary" id="total-files">{{ output_files|length }}</div>
+                <small class="text-muted">总文件数</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="h4 text-success" id="total-size">0 MB</div>
+                <small class="text-muted">总大小</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="h4 text-info" id="recent-files">0</div>
+                <small class="text-muted">今日生成</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="h4 text-warning" id="avg-size">0 MB</div>
+                <small class="text-muted">平均大小</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 文件列表 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <h5 class="mb-0">
+                            <i class="bi bi-images"></i>
+                            生成的文件
+                        </h5>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="search-input" placeholder="搜索文件名...">
+                            <button class="btn btn-outline-secondary" type="button" onclick="searchFiles()">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if output_files %}
+                <div class="row" id="files-grid">
+                    {% for file in output_files %}
+                    <div class="col-md-4 col-lg-3 mb-4 file-item" data-filename="{{ file.filename }}">
+                        <div class="card h-100">
+                            <div class="position-relative">
+                                <img src="/outputs/{{ file.filename }}" class="card-img-top image-preview" 
+                                     style="height: 200px; object-fit: cover;" 
+                                     onclick="showImageModal('{{ file.filename }}')">
+                                <div class="position-absolute top-0 end-0 m-2">
+                                    <span class="badge bg-dark">{{ file.size|filesizeformat }}</span>
+                                </div>
+                            </div>
+                            <div class="card-body p-2">
+                                <h6 class="card-title text-truncate" title="{{ file.filename }}">
+                                    {{ file.filename }}
+                                </h6>
+                                <p class="card-text small text-muted mb-2">
+                                    <i class="bi bi-calendar"></i> {{ file.modified }}
+                                </p>
+                                <div class="btn-group w-100" role="group">
+                                    <button class="btn btn-outline-primary btn-sm" onclick="downloadFile('{{ file.filename }}')">
+                                        <i class="bi bi-download"></i>
+                                    </button>
+                                    <button class="btn btn-outline-info btn-sm" onclick="showImageModal('{{ file.filename }}')">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger btn-sm" onclick="deleteFile('{{ file.filename }}')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-folder-x text-muted" style="font-size: 4rem;"></i>
+                    <h5 class="text-muted mt-3">暂无输出文件</h5>
+                    <p class="text-muted">开始创建任务来生成图片吧！</p>
+                    <a href="/tasks" class="btn btn-primary">
+                        <i class="bi bi-play-circle"></i> 创建任务
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 图片预览模态框 -->
+<div class="modal fade" id="imageModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="imageModalTitle">图片预览</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modalImage" class="img-fluid" style="max-height: 70vh;">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-primary" id="downloadModalBtn">
+                    <i class="bi bi-download"></i> 下载
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 批量操作 -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-check2-square"></i>
+                    批量操作
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <button class="btn btn-outline-primary w-100" onclick="selectAll()">
+                            <i class="bi bi-check-all"></i> 全选
+                        </button>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-outline-secondary w-100" onclick="selectNone()">
+                            <i class="bi bi-x-square"></i> 取消选择
+                        </button>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-outline-success w-100" onclick="downloadSelected()">
+                            <i class="bi bi-download"></i> 下载选中
+                        </button>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-outline-danger w-100" onclick="deleteSelected()">
+                            <i class="bi bi-trash"></i> 删除选中
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let selectedFiles = new Set();
+    
+    // 显示图片模态框
+    function showImageModal(filename) {
+        const modal = new bootstrap.Modal(document.getElementById('imageModal'));
+        const modalImage = document.getElementById('modalImage');
+        const modalTitle = document.getElementById('imageModalTitle');
+        const downloadBtn = document.getElementById('downloadModalBtn');
+        
+        modalTitle.textContent = filename;
+        modalImage.src = `/outputs/${filename}`;
+        downloadBtn.onclick = () => downloadFile(filename);
+        
+        modal.show();
+    }
+    
+    // 下载文件
+    function downloadFile(filename) {
+        const link = document.createElement('a');
+        link.href = `/outputs/${filename}`;
+        link.download = filename;
+        link.click();
+    }
+    
+    // 删除文件
+    function deleteFile(filename) {
+        if (confirm(`确定要删除文件 "${filename}" 吗？`)) {
+            // 这里可以添加删除文件的API调用
+            showMessage('删除功能暂未实现', 'warning');
+        }
+    }
+    
+    // 搜索文件
+    function searchFiles() {
+        const searchTerm = document.getElementById('search-input').value.toLowerCase();
+        const fileItems = document.querySelectorAll('.file-item');
+        
+        fileItems.forEach(item => {
+            const filename = item.dataset.filename.toLowerCase();
+            if (filename.includes(searchTerm)) {
+                item.style.display = 'block';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+    
+    // 刷新输出文件
+    function refreshOutputs() {
+        location.reload();
+    }
+    
+    // 全选
+    function selectAll() {
+        const checkboxes = document.querySelectorAll('.file-checkbox');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = true;
+            selectedFiles.add(checkbox.value);
+        });
+        updateSelectedCount();
+    }
+    
+    // 取消选择
+    function selectNone() {
+        const checkboxes = document.querySelectorAll('.file-checkbox');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        selectedFiles.clear();
+        updateSelectedCount();
+    }
+    
+    // 下载选中文件
+    function downloadSelected() {
+        if (selectedFiles.size === 0) {
+            showMessage('请先选择要下载的文件', 'warning');
+            return;
+        }
+        
+        selectedFiles.forEach(filename => {
+            downloadFile(filename);
+        });
+    }
+    
+    // 删除选中文件
+    function deleteSelected() {
+        if (selectedFiles.size === 0) {
+            showMessage('请先选择要删除的文件', 'warning');
+            return;
+        }
+        
+        if (confirm(`确定要删除选中的 ${selectedFiles.size} 个文件吗？`)) {
+            // 这里可以添加批量删除的API调用
+            showMessage('批量删除功能暂未实现', 'warning');
+        }
+    }
+    
+    // 更新选中数量
+    function updateSelectedCount() {
+        const count = selectedFiles.size;
+        const badge = document.querySelector('.badge.bg-primary');
+        if (badge) {
+            badge.textContent = `${count} 个文件`;
+        }
+    }
+    
+    // 计算文件统计
+    function calculateStats() {
+        const files = {{ output_files|tojson }};
+        const totalFiles = files.length;
+        const totalSize = files.reduce((sum, file) => sum + file.size, 0);
+        const today = new Date().toDateString();
+        const recentFiles = files.filter(file => {
+            const fileDate = new Date(file.modified).toDateString();
+            return fileDate === today;
+        }).length;
+        const avgSize = totalFiles > 0 ? totalSize / totalFiles : 0;
+        
+        document.getElementById('total-files').textContent = totalFiles;
+        document.getElementById('total-size').textContent = formatFileSize(totalSize);
+        document.getElementById('recent-files').textContent = recentFiles;
+        document.getElementById('avg-size').textContent = formatFileSize(avgSize);
+    }
+    
+    // 格式化文件大小
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    // 搜索输入框事件
+    document.getElementById('search-input').addEventListener('input', searchFiles);
+    
+    // 页面加载时计算统计
+    document.addEventListener('DOMContentLoaded', function() {
+        calculateStats();
+    });
+</script>
+{% endblock %}

@@ -15,7 +15,6 @@
 - **按输入图数量分类**：0/1/2/3 输入图场景
 - **JSON 格式** 注册表，易于管理
 - **通过 ID 使用**：`registry.get_prompts_by_ids(["p2_change_people"])`
-- **已导入** aistdio-banana 所有 prompt
 
 ### 🖼️ 灵活图片来源系统
 - **多种图片类型**：支持本地图片、网络图片、文件夹、生成任务等
@@ -315,12 +314,9 @@ banana-gen/
 │   ├── keys/                    # Key 管理
 │   └── output/                  # 输出管理
 ├── prompts/                     # Prompt 文件
-│   ├── prompts_from_aistdio.json # 原始 prompts
-│   └── prompts.sample.json      # 示例 prompts
 ├── example/                     # 示例程序
 │   ├── demo_ultra_simple.py     # 超级简化演示
 │   ├── demo_simple_task_manager.py # 简化演示
-│   ├── demo_task_manager_test.py # 测试程序
 │   └── install_dependencies.py  # 依赖安装
 └── README.md                    # 说明文档
 ```

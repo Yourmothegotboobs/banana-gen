@@ -195,7 +195,7 @@
                     </div>
                     <div class="mb-3">
                         <label for="maxRetries" class="form-label">最大重试次数</label>
-                        <input type="number" class="form-control" id="maxRetries" value="3" min="1" max="10">
+                        <input type="number" class="form-control" id="maxRetries" value="10" min="1" max="10">
                     </div>
                 </div>
 
@@ -446,33 +446,40 @@
             showToast('请先选择 Prompt', 'warning');
             return;
         }
-        
-        const config = {
-            prompt_id: promptId,
-            input_sources: inputSources,
-            replacements: Object.keys(replacements).length > 0 ? replacements : null,
-            replacement_sets: batchReplacements.length > 0 ? batchReplacements.map(item => ({[item.key]: item.values[0]})) : null,
-            output: {
-                base_dir: document.getElementById('outputDir').value,
-                strategy: document.getElementById('pathStrategy').value,
-                token_group_id: 'default'
-            },
-            filename_template: document.getElementById('filenameTemplate').value
+        // 将前端来源转换为新管线 input_configs
+        const mappedSources = (inputSources || []).map(src => {
+            const t = src.type;
+            const path = src.url || src.path;
+            if (!t || !path) return null;
+            if (t === 'local') return { type: 'local_image', main_path: path, fallback_paths: [] };
+            if (t === 'url') return { type: 'url_image', main_path: path, fallback_urls: [] };
+            if (t === 'folder') return { type: 'folder', main_path: path, fallback_paths: [] };
+            if (t === 'recursive') return { type: 'recursive_folder', main_path: path, fallback_paths: [] };
+            return null;
+        }).filter(Boolean);
+
+        const payload = {
+            input_sources: mappedSources,
+            prompt_ids: [promptId],
+            string_replace_list: [],
+            output_dir: document.getElementById('outputDir').value,
+            filename_template: document.getElementById('filenameTemplate').value,
+            base_name: 'webui_task'
         };
-        
-        fetch('/api/execute/build_plan', {
+
+        fetch('/api/tasks/create', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(config)
+            body: JSON.stringify(payload)
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                currentPlan = data;
+                currentPlan = { task_count: data.task_count, tasks: [] };
                 updateTaskPreview(data);
-                showToast(`计划构建成功，共 ${data.task_count} 个任务`, 'success');
+                showToast(`计划创建成功，共 ${data.task_count} 个任务`, 'success');
             } else {
                 showToast(data.error || '构建计划失败', 'danger');
             }
@@ -512,8 +519,8 @@
             max_workers: parseInt(document.getElementById('maxWorkers').value),
             max_retries: parseInt(document.getElementById('maxRetries').value)
         };
-        
-        fetch('/api/execute/start', {
+
+        fetch('/api/tasks/start', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -544,7 +551,7 @@
         }
         
         executionInterval = setInterval(() => {
-            fetch('/api/execute/status')
+            fetch('/api/tasks/status')
                 .then(response => response.json())
                 .then(data => {
                     updateExecutionStatus(data);
@@ -552,26 +559,18 @@
                 .catch(error => {
                     console.error('获取执行状态失败:', error);
                 });
-            
-            fetch('/api/execute/logs')
-                .then(response => response.json())
-                .then(data => {
-                    updateExecutionLogs(data.logs);
-                })
-                .catch(error => {
-                    console.error('获取执行日志失败:', error);
-                });
         }, 2000); // 增加间隔时间到2秒，减少请求频率
     }
 
     function updateExecutionStatus(status) {
-        document.getElementById('totalTasks').textContent = status.total || 0;
-        document.getElementById('completedTasks').textContent = status.completed || 0;
-        document.getElementById('failedTasks').textContent = status.failed || 0;
-        
-        const total = status.total || 1;
-        const completed = status.completed || 0;
-        const percent = Math.round((completed / total) * 100);
+        const stats = status.stats || {};
+        document.getElementById('totalTasks').textContent = stats.total_tasks || 0;
+        document.getElementById('completedTasks').textContent = stats.completed_tasks || 0;
+        document.getElementById('failedTasks').textContent = stats.failed_tasks || 0;
+
+        const total = stats.total_tasks || 1;
+        const done = (stats.completed_tasks || 0) + (stats.failed_tasks || 0);
+        const percent = Math.round((done / total) * 100);
         
         document.getElementById('progressPercent').textContent = percent + '%';
         document.getElementById('progressBar').style.width = percent + '%';

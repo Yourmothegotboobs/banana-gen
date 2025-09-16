@@ -6,10 +6,11 @@ image_gen_keys.txt
 output/
 *.json
 prompt/
-prompts/
-output/
 outputs/
 example/outputs/
+example/picture/
+example/pictures/
+example/outputs-1/
 *.txt/
 other tools/
 samples/

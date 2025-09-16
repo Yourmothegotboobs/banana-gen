@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Key 管理 - Banana Gen</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .key-status {
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        .status-active { background-color: #d1ecf1; color: #0c5460; }
+        .status-failed { background-color: #f8d7da; color: #721c24; }
+        .status-cooldown { background-color: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container-fluid">
+        <!-- 导航栏 -->
+        <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+            <div class="container">
+                <a class="navbar-brand" href="/">
+                    <i class="fas fa-banana"></i> Banana Gen
+                </a>
+                <div class="navbar-nav ms-auto">
+                    <a class="nav-link" href="/">首页</a>
+                    <a class="nav-link" href="/tasks">任务管理</a>
+                    <a class="nav-link active" href="/keys">Key 管理</a>
+                    <a class="nav-link" href="/outputs">输出文件</a>
+                    <a class="nav-link" href="/status">系统状态</a>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container">
+            <div class="row">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2><i class="fas fa-key"></i> API Key 管理</h2>
+                        <div>
+                            <button class="btn btn-outline-primary" id="refreshBtn">
+                                <i class="fas fa-sync-alt"></i> 刷新状态
+                            </button>
+                            <button class="btn btn-warning" id="resetKeysBtn">
+                                <i class="fas fa-redo"></i> 重置失效 Keys
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 状态卡片 -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h5 class="card-title text-success" id="activeKeysCount">-</h5>
+                                    <p class="card-text">活跃 Keys</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h5 class="card-title text-danger" id="failedKeysCount">-</h5>
+                                    <p class="card-text">失效 Keys</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h5 class="card-title text-warning" id="cooldownKeysCount">-</h5>
+                                    <p class="card-text">冷却 Keys</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h5 class="card-title text-info" id="totalKeysCount">-</h5>
+                                    <p class="card-text">总计 Keys</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Key 统计详情 -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-chart-bar"></i> Key 统计详情</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="keyStatsContent">
+                                <div class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">加载中...</span>
+                                    </div>
+                                    <p class="mt-2">正在加载 Key 统计信息...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 页面加载完成后自动刷新状态
+        document.addEventListener('DOMContentLoaded', function() {
+            refreshKeyStatus();
+        });
+
+        // 刷新按钮
+        document.getElementById('refreshBtn').addEventListener('click', refreshKeyStatus);
+
+        // 重置 Keys 按钮
+        document.getElementById('resetKeysBtn').addEventListener('click', function() {
+            if (confirm('确定要重置所有失效的 Keys 吗？这将清除失效状态并重新激活这些 Keys。')) {
+                resetFailedKeys();
+            }
+        });
+
+        // 刷新 Key 状态
+        function refreshKeyStatus() {
+            fetch('/api/keys/status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updateKeyStats(data.stats);
+                    } else {
+                        showError('获取 Key 状态失败: ' + (data.error || '未知错误'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showError('网络错误: ' + error.message);
+                });
+        }
+
+        // 更新 Key 统计信息
+        function updateKeyStats(stats) {
+            // 更新状态卡片
+            document.getElementById('activeKeysCount').textContent = stats.active_keys || 0;
+            document.getElementById('failedKeysCount').textContent = stats.failed_keys || 0;
+            document.getElementById('cooldownKeysCount').textContent = stats.cooldown_keys || 0;
+            document.getElementById('totalKeysCount').textContent = stats.total_keys || 0;
+
+            // 更新详细统计
+            const content = document.getElementById('keyStatsContent');
+            content.innerHTML = '';
+
+            if (stats.pools && Object.keys(stats.pools).length > 0) {
+                // 按优先级显示 Key pools
+                for (const [priority, poolData] of Object.entries(stats.pools)) {
+                    const poolDiv = document.createElement('div');
+                    poolDiv.className = 'mb-3';
+                    poolDiv.innerHTML = `
+                        <h6>优先级 ${priority}</h6>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <span class="key-status status-active">活跃: ${poolData.active || 0}</span>
+                            </div>
+                            <div class="col-md-3">
+                                <span class="key-status status-failed">失效: ${poolData.failed || 0}</span>
+                            </div>
+                            <div class="col-md-3">
+                                <span class="key-status status-cooldown">冷却: ${poolData.cooldown || 0}</span>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>总计: ${poolData.total || 0}</strong>
+                            </div>
+                        </div>
+                    `;
+                    content.appendChild(poolDiv);
+                }
+            } else {
+                content.innerHTML = '<p class="text-muted">没有可用的 Key 统计信息</p>';
+            }
+
+            // 显示最后更新时间
+            const now = new Date();
+            const lastUpdate = document.createElement('small');
+            lastUpdate.className = 'text-muted';
+            lastUpdate.textContent = `最后更新: ${now.toLocaleString()}`;
+            content.appendChild(lastUpdate);
+        }
+
+        // 重置失效的 Keys
+        function resetFailedKeys() {
+            fetch('/api/keys/reset', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showSuccess(data.message || '失效 Keys 已重置');
+                    // 重置后刷新状态
+                    setTimeout(refreshKeyStatus, 1000);
+                } else {
+                    showError('重置失败: ' + (data.error || '未知错误'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showError('网络错误: ' + error.message);
+            });
+        }
+
+        // 显示成功消息
+        function showSuccess(message) {
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-success alert-dismissible fade show';
+            alert.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.querySelector('.container').insertBefore(alert, document.querySelector('.container').firstChild);
+        }
+
+        // 显示错误消息
+        function showError(message) {
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-danger alert-dismissible fade show';
+            alert.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.querySelector('.container').insertBefore(alert, document.querySelector('.container').firstChild);
+        }
+
+        // 定时刷新状态（每30秒）
+        setInterval(refreshKeyStatus, 30000);
+    </script>
+</body>
+</html>

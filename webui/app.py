@@ -47,6 +47,8 @@ app.secret_key = 'banana-gen-webui-secret-key'
 # 全局状态
 key_manager = None
 prompt_registry = None
+generator = None
+task_manager = None
 current_tasks = []
 execution_status = {"running": False, "progress": 0, "total": 0, "completed": 0, "failed": 0}
 execution_logs = []
@@ -95,8 +97,11 @@ def init_prompt_registry():
     """初始化 Prompt 注册表"""
     global prompt_registry
     try:
-        # 尝试从多个位置加载 prompt 文件
+        # 尝试从与 CLI 一致的位置加载 prompt 文件（优先）
         prompt_files = [
+            'prompts/prompts_from_aistdio.json',
+            'prompts/prompts.sample.json',
+            # 兼容旧路径
             'samples/prompts_from_aistdio.json',
             'banana_gen/samples/prompts_from_aistdio.json'
         ]
@@ -327,125 +332,143 @@ def execute_page():
     
     return render_template('execute.html', prompts=prompts, status=execution_status)
 
+# ==================== 新管线：TaskManager APIs ====================
+
+@app.route('/api/tasks/create', methods=['POST'])
+def api_tasks_create():
+    """使用 TaskManager 创建任务（新管线）"""
+    global task_manager, generator
+    data = request.json or {}
+    if generator is None:
+        generator = UnifiedImageGenerator(max_workers=3, max_retries=10)
+    if not prompt_registry:
+        init_prompt_registry()
+
+    input_configs = data.get('input_sources', [])
+    prompt_ids = data.get('prompt_ids', [])
+    prompts = prompt_registry.get_prompts_by_ids(prompt_ids)
+    string_replace_list = data.get('string_replace_list', [])
+    output_dir = data.get('output_dir', OUTPUT_FOLDER)
+    filename_template = data.get('filename_template', '{base}-{prompt_idx}-{replace_idx}-{image_idx}.png')
+    base_name = data.get('base_name', 'webui_task')
+
+    # 允许 0 输入图：若所有选中 Prompt 的 input_count 均为 0，则可不传 input_sources
+    try:
+        max_required = max((p.input_count for p in prompts), default=0)
+    except Exception:
+        max_required = 0
+    if max_required > 0 and not input_configs:
+        return jsonify({'error': '所选 Prompt 需要输入图片，请配置图片来源'}), 400
+
+    try:
+        # 当所选 Prompt 最大 input_count == 0 时，强制允许空输入图
+        try:
+            max_required = max((p.input_count for p in prompts), default=0)
+        except Exception:
+            max_required = 0
+
+        if max_required == 0 and not input_configs:
+            input_configs = []
+
+        task_manager = TaskManager.create_with_auto_fallback(
+            generator=generator,
+            input_configs=input_configs,
+            prompts=prompts,
+            string_replace_list=string_replace_list,
+            output_dir=output_dir,
+            filename_template=filename_template,
+            base_name=base_name,
+        )
+        total = task_manager._calculate_total_tasks()
+        return jsonify({'success': True, 'task_count': total})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+@app.route('/api/tasks/start', methods=['POST'])
+def api_tasks_start():
+    """启动任务执行（新管线）"""
+    global task_manager
+    if not task_manager:
+        return jsonify({'error': 'No task created'}), 400
+    if execution_status.get('running'):
+        return jsonify({'error': 'Task already running'}), 400
+
+    def _run():
+        execution_status['running'] = True
+        try:
+            task_manager.run_with_interactive_monitoring(auto_start=True)
+        finally:
+            execution_status['running'] = False
+
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+    return jsonify({'success': True})
+
+@app.route('/api/tasks/status')
+def api_tasks_status():
+    """获取任务执行状态（新管线）"""
+    if task_manager:
+        s = task_manager.get_status()
+        return jsonify({
+            'running': execution_status.get('running', False),
+            'status': getattr(s['status'], 'name', str(s['status'])),
+            'stats': s['stats'],
+            'generator_stats': s['generator_stats'],
+        })
+    return jsonify(execution_status)
+
 @app.route('/api/execute/build_plan', methods=['POST'])
 def api_build_plan():
-    """构建执行计划"""
-    data = request.json
-    
-    if not prompt_registry:
-        return jsonify({'error': 'Prompt registry not initialized'}), 500
-    
-    try:
-        # 构建图片来源
-        input_sources = []
-        for source_config in data.get('input_sources', []):
-            source_type = source_config['type']
-            if source_type == 'local':
-                source = LocalFileSource(source_config['path'])
-            elif source_type == 'url':
-                source = UrlSource(source_config['url'])
-            elif source_type == 'folder':
-                source = FolderSequencerSource(source_config['path'])
-            elif source_type == 'recursive':
-                source = RecursiveFolderSequencerSource(source_config['path'])
-            else:
-                continue
-            input_sources.append(source)
-        
-        # 构建替换词
-        replacements = data.get('replacements', {})
-        replacement_sets = data.get('replacement_sets', [])
-        
-        # 构建输出管理器
-        output_config = data.get('output', {})
-        output_manager = OutputPathManager(
-            base_dir=output_config.get('base_dir', OUTPUT_FOLDER),
-            strategy=output_config.get('strategy', 'A'),
-            token_group_id=output_config.get('token_group_id', 'default')
-        )
-        
-        # 构建计划
-        tasks = build_plan(
-            registry=prompt_registry,
-            prompt_id=data['prompt_id'],
-            input_sources=input_sources,
-            replacements=replacements if replacements else None,
-            replacement_sets=replacement_sets if replacement_sets else None,
-            output_manager=output_manager,
-            filename_template=data.get('filename_template', '{base}-{promptId}-{date}-{time}.png')
-        )
-        
-        global current_tasks
-        current_tasks = tasks
-        
-        return jsonify({
-            'success': True,
-            'task_count': len(tasks),
-            'tasks': [{'prompt_id': t.get('prompt_id'), 'output_path': t.get('output_path')} for t in tasks[:10]]  # 只返回前10个
-        })
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    """兼容旧接口：改用新管线创建任务（TaskManager）"""
+    data = request.json or {}
+    # 映射旧的 input_sources -> 新的 input_configs
+    mapped = []
+    for src in data.get('input_sources', []):
+        t = src.get('type')
+        p = src.get('path') or src.get('url')
+        if not t or not p:
+            continue
+        if t == 'local':
+            mapped.append({'type': 'local_image', 'main_path': p, 'fallback_paths': []})
+        elif t == 'url':
+            mapped.append({'type': 'url_image', 'main_path': p, 'fallback_urls': []})
+        elif t == 'folder':
+            mapped.append({'type': 'folder', 'main_path': p, 'fallback_paths': []})
+        elif t == 'recursive':
+            mapped.append({'type': 'recursive_folder', 'main_path': p, 'fallback_paths': []})
+    # prompt 映射
+    prompt_ids = data.get('prompt_ids') or ([data.get('prompt_id')] if data.get('prompt_id') else [])
+    payload = {
+        'input_sources': mapped,
+        'prompt_ids': prompt_ids,
+        'string_replace_list': data.get('string_replace_list', []),
+        'output_dir': data.get('output', {}).get('base_dir', OUTPUT_FOLDER),
+        'filename_template': data.get('filename_template', '{base}-{prompt_idx}-{replace_idx}-{image_idx}.png'),
+        'base_name': data.get('base_name', 'webui_task'),
+    }
+    # 复用新接口
+    with app.test_request_context(json=payload):
+        resp = api_tasks_create()
+    # 返回兼容字段
+    if isinstance(resp, tuple):
+        body, code = resp
+        return body, code
+    body = resp.get_json() if hasattr(resp, 'get_json') else resp
+    if body and body.get('success'):
+        return jsonify({'success': True, 'task_count': body.get('task_count', 0)})
+    return jsonify({'error': (body or {}).get('error', 'create failed')}), 400
 
 @app.route('/api/execute/start', methods=['POST'])
 def api_start_execution():
-    """开始执行任务"""
-    if not key_manager:
-        return jsonify({'error': 'Key manager not initialized'}), 500
-    
-    if not current_tasks:
-        return jsonify({'error': 'No tasks to execute'}), 400
-    
-    if execution_status['running']:
-        return jsonify({'error': 'Execution already running'}), 400
-    
-    # 获取执行参数（在请求上下文中）
-    max_workers = int(request.json.get('max_workers', 3))
-    max_retries = int(request.json.get('max_retries', 3))
-    
-    # 在后台线程中执行
-    def run_execution():
-        global execution_status, execution_logs
-        execution_status['running'] = True
-        execution_status['total'] = len(current_tasks)
-        execution_status['completed'] = 0
-        execution_status['failed'] = 0
-        
-        try:
-            execution_logs.append(f"开始执行 {len(current_tasks)} 个任务")
-            
-            # 执行任务（不使用 install_log_tee，避免修改全局输出流）
-            execute_plan(
-                current_tasks,
-                key_manager=key_manager,
-                script_name='webui',
-                max_workers=max_workers,
-                max_retries=max_retries,
-                log_path=""  # 传递空字符串，避免使用 install_log_tee
-            )
-            
-            execution_logs.append("所有任务执行完成")
-            
-        except Exception as e:
-            import traceback
-            error_msg = f"执行出错: {str(e)}"
-            execution_logs.append(error_msg)
-            # 在控制台输出错误信息（不影响 Flask）
-            print(f"❌ {error_msg}")
-            traceback.print_exc()
-        finally:
-            execution_status['running'] = False
-    
-    thread = threading.Thread(target=run_execution)
-    thread.daemon = True
-    thread.start()
-    
-    return jsonify({'success': True, 'message': 'Execution started'})
+    """兼容旧接口：改用新管线启动执行"""
+    # 复用新接口
+    with app.test_request_context(json=request.get_json(silent=True) or {}):
+        return api_tasks_start()
 
 @app.route('/api/execute/status')
 def api_execution_status():
-    """获取执行状态"""
-    return jsonify(execution_status)
+    """兼容旧接口：返回新管线状态"""
+    return api_tasks_status()
 
 @app.route('/api/execute/logs')
 def api_execution_logs():

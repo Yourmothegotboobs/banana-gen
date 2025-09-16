@@ -6,9 +6,7 @@ Banana Gen Web UI 启动脚本 - 旧版本
 import os
 import sys
 import subprocess
-import webbrowser
 import threading
-import time
 
 def check_dependencies():
     """检查依赖是否安装"""
@@ -34,10 +32,7 @@ def create_directories():
         print(f"✅ 目录已创建: {directory}")
 
 def open_browser():
-    """延迟打开浏览器"""
-    time.sleep(2)  # 等待服务器启动
-    webbrowser.open('http://localhost:8888')
-    print("🌐 已自动打开浏览器")
+    return None  # 移除自动打开浏览器逻辑
 
 def main():
     """主函数"""
@@ -60,10 +55,7 @@ def main():
     print("📁 创意相册: http://localhost:8888/outputs")
     print("\n按 Ctrl+C 停止服务")
     
-    # 自动打开浏览器
-    browser_thread = threading.Thread(target=open_browser)
-    browser_thread.daemon = True
-    browser_thread.start()
+    # 不再自动打开浏览器，避免重复打开
     
     try:
         # 导入并运行应用

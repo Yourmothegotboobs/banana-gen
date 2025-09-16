@@ -99,7 +99,9 @@ def init_prompt_registry():
     try:
         # 尝试从与 CLI 一致的位置加载 prompt 文件（优先）
         prompt_files = [
-            'prompts/prompts_from_aistdio.json',
+            'promptfiles/prompts_from_aistdio.json',  # 新的目录名
+            'promptfiles/prompts.sample.json',
+            'prompts/prompts_from_aistdio.json',      # 旧的目录名（兼容性）
             'prompts/prompts.sample.json',
             # 兼容旧路径
             'samples/prompts_from_aistdio.json',

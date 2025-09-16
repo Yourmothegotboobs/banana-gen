@@ -148,8 +148,9 @@ class TaskManager:
             else:
                 print(f"   ❌ 图片 {i+1}: 所有路径都无效")
         
+        # 允许 0 输入图（纯文本生图）
         if not input_images:
-            raise RuntimeError("没有有效的输入图片")
+            print("⚠️ 未提供有效输入图片，将按 0 输入图模式运行（仅使用文本 Prompt）")
         
         # 计算并显示任务统计
         total_combinations = 1
@@ -157,7 +158,8 @@ class TaskManager:
             total_combinations *= len(group)
         
         total_images = sum(img.get_total_count() if hasattr(img, 'get_total_count') else 1 for img in input_images)
-        estimated_tasks = total_images * len(prompts) * total_combinations
+        effective_images = total_images if total_images > 0 else 1
+        estimated_tasks = effective_images * len(prompts) * total_combinations
         
         print(f"\n📊 任务统计:")
         print(f"   输入图片: {total_images} 张")
@@ -193,7 +195,8 @@ class TaskManager:
         for group in self.string_replace_list:
             replace_combinations *= len(group)
         
-        return total * prompt_count * replace_combinations
+        effective_total = total if total > 0 else 1
+        return effective_total * prompt_count * replace_combinations
     
     def _create_task_generator(self):
         """创建任务生成器"""
@@ -226,6 +229,27 @@ class TaskManager:
                 else:
                     # 单个图片类型
                     yield from self._generate_tasks_for_image(img, img_idx)
+            # 若为 0 输入图模式（无任何输入图片），也需要基于文本生成任务
+            if not self.input_images:
+                # 基于文本生成：对每个 prompt 及其替换组合创建无输入的任务
+                for prompt_idx, prompt in enumerate(self._processed_prompts):
+                    for replace_combination in itertools.product(*self.string_replace_list):
+                        current_prompt = self._apply_string_replacements(prompt, replace_combination)
+                        task = ImageGenerateTask([], current_prompt)
+                        replace_idx = self._get_replace_combination_index(replace_combination)
+                        filename = self.filename_template.format(
+                            base=self.base_name,
+                            prompt_idx=prompt_idx,
+                            replace_idx=replace_idx,
+                            image_idx=0
+                        )
+                        yield {
+                            'task': task,
+                            'filename': filename,
+                            'prompt_idx': prompt_idx,
+                            'replace_idx': replace_idx,
+                            'image_idx': 0
+                        }
         
         return task_generator()
     

@@ -68,7 +68,9 @@ def init_prompt_registry():
     try:
         # 尝试从多个位置加载 prompt 文件
         prompt_files = [
-            'prompts/prompts.sample.json',
+            'promptfiles/prompts.sample.json',       # 新的目录名
+            'promptfiles/prompts_from_aistdio.json',
+            'prompts/prompts.sample.json',           # 旧的目录名（兼容性）
             'prompts/prompts_from_aistdio.json'
         ]
         

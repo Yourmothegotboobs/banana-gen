@@ -313,7 +313,7 @@ banana-gen/
 │   │   └── task_manager.py      # 任务管理器
 │   ├── keys/                    # Key 管理
 │   └── output/                  # 输出管理
-├── prompts/                     # Prompt 文件
+├── promptfiles/                     # Prompt 文件目录 (从 prompts/ 重命名)
 ├── example/                     # 示例程序
 │   ├── demo_ultra_simple.py     # 超级简化演示
 │   ├── demo_simple_task_manager.py # 简化演示

@@ -339,8 +339,9 @@ class ImageGenerateTask(SingleImage):
     
     def _validate_inputs(self):
         """验证输入图片"""
+        # 允许 0 输入图（纯文本生图）
         if not self._input_images:
-            self._status = ImageStatus.INVALID
+            self._status = ImageStatus.VALID
             return
         
         # 检查所有输入图片是否有效
@@ -366,7 +367,7 @@ class ImageGenerateTask(SingleImage):
             return False
         
         try:
-            # 转换输入图片为ImageData
+            # 转换输入图片为ImageData（0 输入图将跳过此循环）
             image_data_list = []
             for img in self._input_images:
                 # 如果是ImageGenerateTask或ImageGenerateTasks，尝试自动执行
@@ -389,7 +390,7 @@ class ImageGenerateTask(SingleImage):
                     return False
                 image_data_list.append(img_data)
             
-            # 准备图片路径（临时保存）
+            # 准备图片路径（临时保存）。若为 0 输入图，保持空列表
             temp_paths = []
             for i, img_data in enumerate(image_data_list):
                 temp_path = f"/tmp/banana_gen_input_{i}.{img_data.format.lower()}"

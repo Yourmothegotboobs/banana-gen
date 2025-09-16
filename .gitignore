@@ -14,6 +14,7 @@ example/outputs-1/
 *.txt/
 other tools/
 samples/
+webui/outputs/
 
 
 # 日志文件 - 可能包含敏感信息

@@ -84,9 +84,9 @@ def generate_unique_filename(base_name: str, prompt_id: str, generation_idx: int
 class UnifiedImageGenerator:
     """统一生图调度管理器 - 完全自包含，用户无需手动管理 Key"""
     
-    def __init__(self, 
-                 key_source: Union[str, List[str], None] = None,
-                 max_workers: int = 3, 
+    def __init__(self,
+                 key_source: Union[str, List[str], None, AdvancedKeyManager] = None,
+                 max_workers: int = 3,
                  max_retries: int = 10):
         """
         初始化统一生图调度管理器
@@ -96,6 +96,7 @@ class UnifiedImageGenerator:
                 - None: 默认扫描 banana_gen/keys 文件夹
                 - str: 文件夹路径、txt文件路径或单个key字符串
                 - List[str]: key字符串列表
+                - AdvancedKeyManager: 已初始化的Key管理器实例
             max_workers: 最大并行度，默认3
             max_retries: 最大重试次数，默认10
         """
@@ -125,7 +126,7 @@ class UnifiedImageGenerator:
         print(f"   ⚡ 并行度: {max_workers}")
         print(f"   🔄 重试次数: {max_retries}")
     
-    def _init_key_manager(self, key_source: Union[str, List[str], None]) -> Optional[AdvancedKeyManager]:
+    def _init_key_manager(self, key_source: Union[str, List[str], None, AdvancedKeyManager]) -> Optional[AdvancedKeyManager]:
         """初始化 Key 管理器，自动判断输入类型"""
         if key_source is None:
             # 默认扫描 banana_gen/keys 文件夹
@@ -137,6 +138,11 @@ class UnifiedImageGenerator:
                 print(f"⚠️ 默认 Key 文件夹不存在: {default_keys_dir}")
                 return None
         
+        if isinstance(key_source, AdvancedKeyManager):
+            # 直接传入的 AdvancedKeyManager 实例
+            print(f"🔑 使用传入的 AdvancedKeyManager 实例")
+            return key_source
+
         if isinstance(key_source, list):
             # 直接传入的 key 列表
             print(f"🔑 使用传入的 Key 列表: {len(key_source)} 个")

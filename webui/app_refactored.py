@@ -124,8 +124,8 @@ def init_output_manager():
     global output_manager
     try:
         output_manager = OutputPathManager(
-            output_dir=OUTPUT_FOLDER,
-            path_strategy='unified'  # 统一路径策略
+            base_dir=OUTPUT_FOLDER,
+            strategy='A'  # 统一路径策略
         )
         print(f"✅ 输出管理器初始化成功")
         return True
@@ -133,6 +133,7 @@ def init_output_manager():
         print(f"❌ 输出管理器初始化失败: {e}")
         output_manager = None
         return False
+
 
 @app.route('/')
 def index():
@@ -158,7 +159,22 @@ def tasks_page():
                     'input_count': prompt.input_count
                 })
     
-    return render_template('tasks_refactored.html', prompts=prompts, status=execution_status)
+    return render_template('tasks_refactored.html', prompts=prompts)
+
+@app.route('/api/prompts/<prompt_id>')
+def api_get_prompt(prompt_id):
+    """获取特定 Prompt 详情（用于任务页右侧编辑显示）"""
+    if not prompt_registry:
+        return jsonify({'error': 'Prompt registry not initialized'}), 500
+    prompt = prompt_registry.get(prompt_id)
+    if not prompt:
+        return jsonify({'error': 'Prompt not found'}), 404
+    return jsonify({
+        'id': prompt.id,
+        'text': prompt.text,
+        'input_count': prompt.input_count,
+        'tags': prompt.tags or []
+    })
 
 @app.route('/api/tasks/create', methods=['POST'])
 def api_create_task():
@@ -209,9 +225,18 @@ def api_create_task():
                     'fallback_paths': source_config.get('fallback_paths', [])
                 })
 
-        # 使用 CLI 的 prompt 获取方法
+        # 使用 CLI 的 prompt 获取方法，支持自定义文本覆盖
         prompt_ids = data.get('prompt_ids', [])
-        prompts = prompt_registry.get_prompts_by_ids(prompt_ids)
+        custom_prompts = data.get('custom_prompts', [])  # [{id, text}]
+        custom_map = {p.get('id'): p.get('text') for p in custom_prompts if p.get('id') and p.get('text')}
+        prompts = []
+        for pid in prompt_ids:
+            if pid in custom_map:
+                prompts.append(custom_map[pid])  # 使用自定义纯文本
+            else:
+                p = prompt_registry.get(pid)
+                if p:
+                    prompts.append(p)
 
         # 字符串替换规则
         string_replace_list = data.get('string_replace_list', [])
@@ -219,7 +244,16 @@ def api_create_task():
         # 使用 CLI 的输出管理器配置路径
         output_dir = data.get('output_dir', OUTPUT_FOLDER)
         if output_manager:
-            output_dir = output_manager.get_output_dir()
+            output_dir = output_manager.ensure_dir()
+
+        # 全局配置：每个 Prompt 生成张数（通过重复 Prompt 列表实现）
+        repeat_per_prompt = int(data.get('repeat_per_prompt', 1) or 1)
+        if repeat_per_prompt > 1 and len(prompts) > 0:
+            original_prompts = prompts
+            prompts = []
+            for prom in original_prompts:
+                # 将每个 prompt 重复 N 次
+                prompts.extend([prom] * repeat_per_prompt)
 
         # 使用 CLI 的 TaskManager.create_with_auto_fallback 方法
         global current_task_manager
@@ -259,6 +293,54 @@ def api_create_task():
             'error': error_msg
         })
         return jsonify({'error': error_msg}), 500
+
+@app.route('/api/tasks/preview', methods=['POST'])
+def api_preview_task():
+    """预览任务统计：仅返回预计任务数、prompt数、替换组合数，不创建任务"""
+    if not prompt_registry:
+        return jsonify({'error': 'Prompt registry not initialized'}), 500
+    data = request.json or {}
+    # 构建 prompts（考虑自定义文本和重复）
+    prompt_ids = data.get('prompt_ids', [])
+    custom_prompts = data.get('custom_prompts', [])
+    custom_map = {p.get('id'): p.get('text') for p in custom_prompts if p.get('id') and p.get('text')}
+    prompts = []
+    for pid in prompt_ids:
+        if pid in custom_map:
+            prompts.append(custom_map[pid])
+        else:
+            p = prompt_registry.get(pid)
+            if p:
+                prompts.append(p)
+    repeat_per_prompt = int(data.get('repeat_per_prompt', 1) or 1)
+    if repeat_per_prompt > 1 and len(prompts) > 0:
+        prompts = [p for p in prompts for _ in range(repeat_per_prompt)]
+
+    # 替换组合
+    string_replace_list = data.get('string_replace_list', [])
+    replace_combinations = 1
+    for group in string_replace_list:
+        replace_combinations *= max(1, len(group))
+
+    # 输入图片数量估计（根目录文件按1计、文件夹暂按1计）
+    input_sources = data.get('input_sources', [])
+    total_images = 0
+    for src in input_sources:
+        t = src.get('type')
+        if t in ['local_image', 'url_image']:
+            total_images += 1
+        elif t in ['folder', 'recursive_folder']:
+            total_images += 1  # 简化估计
+    effective_images = total_images if total_images > 0 else 1
+
+    prompt_count = len(prompts)
+    estimated_tasks = effective_images * prompt_count * replace_combinations
+    return jsonify({
+        'success': True,
+        'estimated_tasks': estimated_tasks,
+        'prompt_count': prompt_count,
+        'replace_combinations': replace_combinations
+    })
 
 @app.route('/api/tasks/start', methods=['POST'])
 def api_start_task():

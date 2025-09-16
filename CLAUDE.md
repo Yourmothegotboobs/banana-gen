@@ -55,7 +55,7 @@ This is a unified image generation management framework built around these key c
 banana_gen/
 ├── core/           # Core framework definitions
 ├── keys/           # API key management (AdvancedKeyManager)
-├── prompts/        # Prompt system (PromptRegistry, Prompt classes)
+├── promptfiles/    # Prompt files directory (renamed from prompts/)
 ├── images/         # Image source abstraction (LocalImage, UrlImage, ImageFolder, etc.)
 ├── executor/       # Task execution (UnifiedImageGenerator, TaskManager)
 ├── output/         # Output path management and metadata embedding
@@ -134,7 +134,7 @@ The AdvancedKeyManager automatically handles key rotation, failure detection, an
 
 ### Prompt System
 Prompts are managed through:
-- JSON registry files in `prompts/` directory
+- JSON registry files in `promptfiles/` directory (renamed from prompts/)
 - Structured `Prompt` classes with metadata
 - ID-based retrieval: `registry.get_prompts_by_ids(["p2_change_people"])`
 - Categorization by input image count (0/1/2/3 input scenarios)

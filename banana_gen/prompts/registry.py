@@ -21,8 +21,13 @@ class PromptRegistry:
         """加载提示词"""
         # 获取当前文件所在目录
         current_dir = Path(__file__).parent.parent.parent
-        prompts_file = current_dir / "prompts" / "prompts_from_aistdio.json"
-        
+        # 优先尝试新的 promptfiles 目录
+        prompts_file = current_dir / "promptfiles" / "prompts_from_aistdio.json"
+
+        # 如果新目录不存在，尝试旧目录以保持兼容性
+        if not prompts_file.exists():
+            prompts_file = current_dir / "prompts" / "prompts_from_aistdio.json"
+
         if prompts_file.exists():
             try:
                 with open(prompts_file, 'r', encoding='utf-8') as f:
@@ -30,7 +35,7 @@ class PromptRegistry:
                     for prompt_data in data.get('prompts', []):
                         prompt = Prompt.from_dict(prompt_data)
                         self.prompts[prompt.id] = prompt
-                print(f"✅ 加载了 {len(self.prompts)} 个提示词")
+                print(f"✅ 加载了 {len(self.prompts)} 个提示词，来源: {prompts_file}")
             except Exception as e:
                 print(f"❌ 加载提示词失败: {e}")
         else:

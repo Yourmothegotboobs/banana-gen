@@ -26,7 +26,6 @@ records.jsonl
 state.json
 
 # 输出文件 - 生成的图片
-output/
 generated/
 results/
 

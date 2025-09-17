@@ -3,7 +3,6 @@ api_keys_*.txt
 valid_keys.txt
 invalid_keys.txt
 image_gen_keys.txt
-output/
 *.json
 prompt/
 outputs/

